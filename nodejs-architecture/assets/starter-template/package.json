@@ -1,0 +1,25 @@
+{
+  "name": "nodejs-modular-starter",
+  "version": "1.0.0",
+  "description": "Minimal Express app: feature modules + plugins + custom DI + in-memory event bus + env config + org scoping + graceful shutdown",
+  "type": "module",
+  "main": "src/app/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/app/index.js",
+    "dev": "node --watch src/app/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "winston": "^3.13.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  }
+}
