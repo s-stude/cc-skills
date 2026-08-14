@@ -1,0 +1,36 @@
+{
+  "meta": {
+    "uid": "jp_a8f2k9m4",
+    "is_deleted": false,
+    "archived_at": null,
+    "created_at": "2026-01-30T12:00:00.000Z",
+    "updated_at": "2026-01-30T12:00:00.000Z",
+    "published_at": "2026-01-30T12:00:00.000Z",
+    "expires_at": null
+  },
+  "org": {
+    "uid": "org_97afthhf"
+  },
+  "source": {
+    "source_url": "https://www.source-url.com/job/uid123414234"
+  },
+  "parsed_airport_name": "JFK airport",
+  "parsed_airport_iata": "JFK",
+  "parsed_airport_icao": "<enter-icao-here>",
+  "parsed_country_code": "US",
+  "parsed_country_name": "United States of America",
+  "parsed_state_code": "AZ",
+  "parsed_state_name": "Arizona",
+  "parsed_city_name": null,
+  "job_category_uid": "jc_a1b2c3d4",
+  "job_category_slug": "logistics-supply-chain",
+  "apply_url": "https://www.external-website.com/apply?id=12345",
+  "title": "Airport Aviation Screener ",
+  "title_slug": "airport-aviation-screener",
+  "work_mode": "on-site",
+  "seniority": "mid",
+  "contract_type": "full-time",
+  "travel_required": true,
+  "compensation_text": "Competitive salary based on experience",
+  "description_markdown": "## About the Role.... GAT is seeking a highly motivated individual, a self-starter and team player, with a strong drive for results and continual improvement to join its team of aviation professionals. In joining our team, you will enjoy a competitive salary, great benefits, and a creative and energetic work environment.\n"
+}
