@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-skills_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-project_root="$(dirname "$skills_dir")"
-target_dir="$project_root/.claude/skills"
+if [ $# -ne 1 ]; then
+  echo "Usage: $0 <project-dir>" >&2
+  echo "Symlinks every skill in this repo into <project-dir>/.claude/skills" >&2
+  exit 1
+fi
 
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+target_dir="$(cd "$1" && pwd -P)/.claude/skills"
 mkdir -p "$target_dir"
 
-for skill in "$skills_dir"/*/; do
-  name="$(basename "$skill")"
-  [ -f "$skill/SKILL.md" ] || continue
+# peer-chat keeps its Claude side in claude/ and its Codex side in codex/
+while IFS= read -r skill_md; do
+  skill="$(dirname "$skill_md")"
+  case "$skill" in
+    */codex) continue ;;
+    */claude) name="$(basename "$(dirname "$skill")")" ;;
+    *) name="$(basename "$skill")" ;;
+  esac
 
   link="$target_dir/$name"
   if [ -e "$link" ] && [ ! -L "$link" ]; then
@@ -17,6 +26,6 @@ for skill in "$skills_dir"/*/; do
     continue
   fi
 
-  ln -sfn "../../skills/$name" "$link"
-  echo "linked: .claude/skills/$name -> skills/$name"
-done
+  ln -sfn "$skill" "$link"
+  echo "linked: $link -> $skill"
+done < <(find "$repo" -name SKILL.md -not -path '*/.git/*' -not -path '*/.claude/*' | sort)
