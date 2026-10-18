@@ -1,0 +1,23 @@
+{
+  "skill_name": "token-analysis",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "how much did the airesearch work cost me so far? tokens per session, subagents, time spent by me vs agents, commits incl. killed branches and LOC. put it in tokens-report.md",
+      "expected_output": "A report scoped to airesearch* branches and the project's sibling worktrees, matching the reference numbers (≈49 sessions, ≈694 commits created, net +75,220/−124 on airesearch-tests), with an explained recorded-vs-ledger cost gap and the subagent output caveat.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "give me a quick token + time breakdown for just session b81a72c5 in the roadmap-worktree-tests folder, no git stuff needed",
+      "expected_output": "sessions.py run with --sessions b81a72c5 on the worktree-tests transcript folder only; report without a git section; per-prompt and per-tool tables.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "what did I do in the roadmap-main scratch repo on Oct 13? tokens, cost, commits and lines",
+      "expected_output": "Scope limited to the roadmap-main transcript folder and repo; 2 sessions, ≈123 calls, ≈$9.8; 2 commits with the whole history counted (no team baseline); +486,319 lines flagged as an initial import, not authored code.",
+      "files": []
+    }
+  ]
+}
