@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn page</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root { color-scheme: light; --ink: #14142b; --soft: #464a66; --line: #d9dcea; }
+[hidden] { display: none !important; }
+body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+code, .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.88em; }
+svg text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.diagram svg { display: block; }
+.node, .edge { cursor: pointer; outline: none; }
+.node .frame { transition: stroke-width .12s; }
+.node:hover .frame, .node.sel .frame, .node:focus-visible .frame { stroke-width: 4; }
+.node:focus-visible .ring, .edge:focus-visible .ring { display: block; }
+.ring { display: none; }
+.edge:hover .line, .edge.sel .line, .edge:focus-visible .line { stroke-width: 3.4; }
+.dim { opacity: 0.16; }
+.tab[aria-selected="true"] { background: #14142b; color: #fff; border-color: #14142b; }
+.relbtn.sel { background: #eef0fb; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+@media print {
+	.noprint, #detail { display: none !important; }
+	.panel { display: grid !important; break-before: page; }
+	.diagram { overflow: visible !important; }
+	body { padding: 0 !important; background: #fff !important; }
+}
+</style>
+</head>
+<body class="bg-[#f7f8fc] text-[#14142b] text-[15px] leading-relaxed antialiased px-4 pt-7 pb-40">
+<div class="mx-auto max-w-[1480px] grid gap-6">
+
+<header class="grid gap-3">
+	<span class="text-xs font-semibold uppercase tracking-[0.12em] text-[#464a66]" id="eyebrow"></span>
+	<h1 class="font-extrabold text-[clamp(28px,4vw,42px)] leading-[1.1] tracking-tight text-balance" id="title"></h1>
+	<p class="max-w-[85ch] text-[#464a66]" id="intro"></p>
+	<p class="max-w-[110ch] text-[13px] text-[#464a66] [&_a]:underline" id="sourceNote"></p>
+	<div class="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-[#464a66]" id="evLegend"></div>
+</header>
+
+<nav class="noprint md:sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-[#f7f8fc]/95 backdrop-blur border-b border-[#d9dcea] flex flex-wrap items-center gap-2" aria-label="Views">
+	<div class="flex flex-wrap gap-2" role="tablist" id="tabs"></div>
+	<span class="grow"></span>
+	<button type="button" class="rounded-lg border border-[#d9dcea] bg-white px-3 py-1.5 text-sm font-medium hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" id="tourStart" hidden>Guided walk-through</button>
+	<button type="button" class="rounded-lg border border-[#d9dcea] bg-white px-3 py-1.5 text-sm font-medium hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" id="clear">Clear highlight</button>
+</nav>
+
+<section class="noprint grid gap-2 rounded-xl border-2 border-[#1d4ed8] bg-white px-4 py-3" id="tour" hidden aria-live="polite">
+	<div class="flex flex-wrap items-center gap-2">
+		<b class="text-sm" id="tourCount"></b>
+		<span class="text-sm text-[#464a66]" id="tourView"></span>
+		<span class="grow"></span>
+		<button type="button" class="rounded-md border border-[#d9dcea] px-2.5 py-1 text-sm focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" id="tourPrev">Back</button>
+		<button type="button" class="rounded-md border border-[#d9dcea] px-2.5 py-1 text-sm focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" id="tourNext">Next</button>
+		<button type="button" class="rounded-md border border-[#d9dcea] px-2.5 py-1 text-sm focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" id="tourExit">Close</button>
+	</div>
+	<p class="max-w-[95ch]" id="tourText"></p>
+</section>
+
+<main class="grid gap-6" id="panels"></main>
+
+<section class="grid gap-3 rounded-xl border border-[#d9dcea] bg-white p-5 max-w-none [&_h2]:text-xl [&_h2]:font-extrabold [&_h3]:font-bold [&_table]:text-[14px] [&_th]:text-left [&_th]:border-b [&_th]:border-[#d9dcea] [&_th]:px-2 [&_th]:py-1 [&_td]:border-b [&_td]:border-[#eceef6] [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_code]:mono [&_p]:max-w-[95ch]" id="notes" hidden></section>
+
+<section class="grid gap-3" id="quiz" hidden>
+	<h2 class="text-xl font-extrabold">Check your understanding</h2>
+	<div class="grid gap-2" id="quizList"></div>
+</section>
+
+<section class="grid gap-3" id="glossary" hidden>
+	<h2 class="text-xl font-extrabold">Glossary</h2>
+	<dl class="grid gap-x-6 gap-y-2 [grid-template-columns:minmax(140px,max-content)_1fr]" id="glossaryList"></dl>
+</section>
+
+<section class="grid gap-3" id="sources" hidden>
+	<h2 class="text-xl font-extrabold">Sources</h2>
+	<ul class="grid gap-1 pl-5 list-disc text-[14px] [&_a]:underline" id="sourceList"></ul>
+</section>
+
+</div>
+
+<aside class="fixed bottom-4 right-4 z-20 grid content-start w-[min(460px,calc(100vw-32px))] max-h-[min(72vh,600px)] gap-2.5 overflow-auto rounded-xl border-2 bg-white px-[18px] py-4 shadow-[0_12px_40px_rgba(20,20,43,.2)]" id="detail" role="dialog" aria-modal="false" aria-labelledby="detailTitle" hidden></aside>
+
+<script>
+// ===== DATA START =====
+// Fictional example for the learn-repo:module-dependency skill. Not a default architecture.
+const PAGE = {
+	kind: "module-dependency",
+	eyebrow: "Example app · Modules",
+	title: "Which modules the example app is made of, and what needs what",
+	intro: "Four internal modules and one package. Orders and Storage depend on each other. Click a module for its dependencies and dependents, or use the trace buttons to see everything reachable.",
+	sourceNote: "Built from a static import scan of the fictional <code>src/</code> on 2026-11-01, commit <code>abc1234</code>. Type-only imports are drawn separately."
+};
+const TYPES = {};
+const EDGE_KINDS = {};
+const VIEWS = [
+	{
+		id: "graph",
+		notation: "graph",
+		tab: "Module graph",
+		title: "Module dependency graph",
+		purpose: "What each module needs and who needs it.",
+		read: "Follow an arrow from the module that needs something to the module it needs. Dashed boxes are outside packages; the dotted one could not be resolved.",
+		scope: "src/ui, src/worker, src/orders, src/storage. Tests excluded.",
+		nodes: [
+			{ id: "ui", type: "module", label: "ui", sub: "src/ui", short: "Screens", col: 0, row: 0, ev: "code", refs: [ "src/ui/index.ts" ] },
+			{ id: "worker", type: "module", label: "worker", sub: "src/worker", short: "Background jobs", col: 2, row: 0, ev: "code", refs: [ "src/worker/index.ts" ] },
+			{ id: "orders", type: "module", label: "orders", sub: "src/orders", short: "Order rules and checkout", col: 1, row: 1, ev: "code", refs: [ "src/orders/index.ts" ] },
+			{ id: "storage", type: "module", label: "storage", sub: "src/storage", short: "Saves and loads records", col: 1, row: 2, ev: "code", refs: [ "src/storage/index.ts" ] },
+			{ id: "pg", type: "external", label: "pg", sub: "npm package", short: "PostgreSQL client", col: 0, row: 2, ev: "code", refs: [ "package.json:14" ] },
+			{ id: "reports", type: "unresolved", label: "./legacy/reports", short: "Dynamic import; file not found", col: 2, row: 2, ev: "code", refs: [ "src/orders/export.ts:8" ] }
+		],
+		edges: [
+			{ from: "ui", to: "orders", kind: "imports", label: "placeOrder", ev: "code+check", refs: [ "src/ui/checkout.tsx:3" ] },
+			{ from: "worker", to: "orders", kind: "imports", label: "expireCarts", ev: "code", refs: [ "src/worker/carts.ts:2" ] },
+			{ id: "orders-storage", from: "orders", to: "storage", kind: "imports", label: "saveOrder", ev: "code+check", refs: [ "src/orders/checkout.ts:5" ] },
+			{ id: "storage-orders", from: "storage", to: "orders", kind: "type", label: "Order type", ev: "code+check", refs: [ "src/storage/orders.ts:1" ], detail: "A type-only import. It makes a cycle in the source graph but nothing from orders runs inside storage." },
+			{ from: "storage", to: "pg", kind: "imports", label: "Pool", ev: "code", refs: [ "src/storage/db.ts:1" ] },
+			{ from: "orders", to: "reports", kind: "runtime", label: "import() on export", ev: "code", refs: [ "src/orders/export.ts:8" ] }
+		]
+	},
+	{
+		id: "inside-orders",
+		notation: "internals",
+		module: "orders",
+		parent: "graph",
+		focus: "orders",
+		tab: "Inside orders",
+		title: "Inside the orders module",
+		purpose: "What orders exposes, what it is made of, and which part crosses the boundary.",
+		read: "The dashed boundary is the module. Only index.ts is public; arrows leaving the boundary are the module's dependencies.",
+		groups: [ { id: "orders-boundary", label: "ORDERS (src/orders)", col: 0, row: 0, w: 2, h: 2 } ],
+		nodes: [
+			{ id: "index", type: "part", label: "index.ts", short: "Public surface: placeOrder, expireCarts", col: 0, row: 0, group: "orders-boundary", ev: "code+check", refs: [ "src/orders/index.ts:1-4" ] },
+			{ id: "checkout", type: "part", label: "checkout.ts", short: "Validates the cart, saves the order", col: 1, row: 0, group: "orders-boundary", ev: "code", refs: [ "src/orders/checkout.ts" ] },
+			{ id: "carts", type: "part", label: "carts.ts", short: "Finds and expires old carts", col: 0, row: 1, group: "orders-boundary", ev: "code", refs: [ "src/orders/carts.ts" ] },
+			{ id: "order-type", type: "contract", label: "Order", sub: "type", short: "Shape of a saved order", col: 1, row: 1, group: "orders-boundary", ev: "code", refs: [ "src/orders/types.ts:3" ] },
+			{ id: "storage", type: "module", label: "storage", sub: "src/storage", col: 2, row: 0, ev: "code" }
+		],
+		edges: [
+			{ from: "index", to: "checkout", kind: "imports", label: "re-exports", ev: "code+check", refs: [ "src/orders/index.ts:2" ] },
+			{ from: "index", to: "carts", kind: "imports", label: "re-exports", ev: "code+check", refs: [ "src/orders/index.ts:3" ] },
+			{ from: "checkout", to: "order-type", kind: "type", label: "Order", ev: "code", refs: [ "src/orders/checkout.ts:2" ] },
+			{ from: "checkout", to: "storage", kind: "imports", label: "saveOrder", ev: "code+check", refs: [ "src/orders/checkout.ts:5" ] }
+		]
+	}
+];
+const TOUR = [
+	{ view: "graph", nodes: [ "ui", "orders" ], edges: [ "e0" ], text: "Read the arrow as “ui depends on orders”: ui imports placeOrder from it." },
+	{ view: "graph", nodes: [ "orders", "storage" ], edges: [ "orders-storage", "storage-orders" ], text: "Orders and storage depend on each other. The storage → orders edge is type-only, so the cycle exists for the compiler but not at runtime." },
+	{ view: "inside-orders", nodes: [ "checkout", "storage" ], edges: [ "e3" ], text: "Inside orders, only checkout.ts crosses the boundary to storage." }
+];
+const QUIZ = [
+	{ q: "If storage changes its saveOrder signature, which modules may need review?", a: "orders directly, then ui and worker through orders. That is a review scope, not a guarantee they break." },
+	{ q: "Does ui depend on storage?", a: "Not directly. It reaches storage only through orders." }
+];
+const GLOSSARY = [
+	[ "Dependency", "A module this one needs. Outgoing arrow." ],
+	[ "Dependent", "A module that needs this one. Incoming arrow." ],
+	[ "Cycle", "Following arrows leads back to the start." ]
+];
+const SOURCES = [
+	{ label: "Bazel: dependencies", href: "https://bazel.build/concepts/dependencies" }
+];
+const NOTES = "";
+// ===== DATA END =====
+
+// ===== PRESETS START =====
+// Notation shared by every learn page. A page may add or override entries through TYPES and EDGE_KINDS.
+const GRID = { cw: 192, ch: 104, gx: 140, gy: 84, pad: 84 };
+const labelChars = (a, b) => { const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y); return dx > dy ? Math.max(10, Math.min(24, Math.floor((Math.hypot(dx, dy) - 16) / 6.4))) : 24; };
+const PALETTE = {
+	blue: { color: "#1d4ed8", tint: "#dbeafe" },
+	violet: { color: "#6d28d9", tint: "#ede9fe" },
+	teal: { color: "#0f766e", tint: "#ccfbf1" },
+	orange: { color: "#c2410c", tint: "#ffedd5" },
+	rose: { color: "#be123c", tint: "#ffe4e6" },
+	amber: { color: "#b45309", tint: "#fef3c7" },
+	indigo: { color: "#4338ca", tint: "#e0e7ff" },
+	slate: { color: "#475569", tint: "#f1f5f9" },
+	green: { color: "#15803d", tint: "#dcfce7" },
+	sky: { color: "#0369a1", tint: "#e0f2fe" }
+};
+const SHAPES = [ "rect", "round", "person", "cylinder", "store", "ellipse", "hex", "class", "component" ];
+const HEADS = [ "none", "arrow", "open", "triangle", "diamond", "diamond-filled" ];
+const nodeType = (label, shape, palette, extra = {}) => ({ label, shape, ...PALETTE[palette], ...extra });
+const edgeKind = (label, meaning, extra = {}) => ({ label, meaning, color: "#1e1b3a", dash: "", head: "arrow", tail: "none", ends: "none", ...extra });
+const PRESETS = {
+	"c4": {
+		arrow: "A → B: A uses or depends on B. The label says how.",
+		types: {
+			person: nodeType("Person", "person", "orange"),
+			system: nodeType("Software system", "round", "blue"),
+			"external-system": nodeType("External system", "round", "slate", { dashed: true }),
+			container: nodeType("Container", "round", "violet"),
+			database: nodeType("Data store", "cylinder", "teal"),
+			component: nodeType("Component", "round", "indigo"),
+			code: nodeType("Code element", "class", "sky"),
+			"external-code": nodeType("External code", "class", "slate", { dashed: true }),
+			"uml-component": nodeType("UML component", "component", "violet"),
+			"uml-interface": nodeType("Interface", "class", "teal", { stereotype: "interface" })
+		},
+		edges: {
+			uses: edgeKind("uses / calls", "A uses B (runtime call or read/write)"),
+			async: edgeKind("sends asynchronously", "A sends a message or event that B receives", { dash: "7 5" }),
+			"code-dep": edgeKind("code dependency", "A's code references B's code", { dash: "3 4", head: "open" }),
+			inherits: edgeKind("inherits", "A extends B", { head: "triangle" }),
+			dependency: edgeKind("UML dependency «use»", "A needs B", { dash: "7 5", head: "open" }),
+			realization: edgeKind("realizes", "A implements interface B", { dash: "7 5", head: "triangle" }),
+			assembly: edgeKind("assembly", "ball-and-socket on the line: A's required interface (socket) is plugged into B's provided one (ball); the label names the interface, not a call direction", { head: "none", mid: "ballsocket" }),
+			delegation: edgeKind("delegation", "the outer component hands the interaction to an inner part", { head: "open" })
+		}
+	},
+	"data-flow": {
+		arrow: "A → B: data moves from A to B. The label names the data.",
+		trace: { lineage: { out: "Downstream (all reachable)", in: "Upstream (all sources)" } },
+		types: {
+			entity: nodeType("External entity", "rect", "orange"),
+			process: nodeType("Process", "round", "violet"),
+			store: nodeType("Data store", "store", "teal"),
+			source: nodeType("Source system", "rect", "blue"),
+			dataset: nodeType("Dataset", "cylinder", "teal"),
+			job: nodeType("Job / transformation", "hex", "violet"),
+			stage: nodeType("Pipeline stage", "round", "blue"),
+			artifact: nodeType("Intermediate artifact", "cylinder", "sky"),
+			consumer: nodeType("Consumer", "rect", "amber"),
+			scheduler: nodeType("Scheduler / trigger", "ellipse", "slate")
+		},
+		edges: {
+			flow: edgeKind("data flow", "the named data moves from A to B"),
+			derives: edgeKind("feeds", "B is derived from A"),
+			data: edgeKind("data moves", "the named data moves from stage A to stage B"),
+			trigger: edgeKind("runs after (no data)", "B starts after A; no data is carried", { dash: "3 4", head: "open", color: "#64748b" })
+		}
+	},
+	"module-dependency": {
+		arrow: "A → B: A depends on B. B is a dependency of A; A is a dependent of B.",
+		trace: { default: { out: "Depends on (all reachable)", in: "Needed by (all reachable)" } },
+		types: {
+			module: nodeType("Module", "round", "blue"),
+			part: nodeType("Internal part", "rect", "violet"),
+			contract: nodeType("Contract / interface", "ellipse", "teal"),
+			resource: nodeType("Runtime resource", "cylinder", "amber"),
+			external: nodeType("External package", "rect", "slate", { dashed: true }),
+			unresolved: nodeType("Unresolved target", "rect", "rose", { dotted: true })
+		},
+		edges: {
+			imports: edgeKind("imports", "A imports B"),
+			type: edgeKind("uses type only", "A uses B's types; nothing runs", { dash: "7 5" }),
+			runtime: edgeKind("loads at runtime / DI", "A gets B at runtime (dynamic import, DI, plugin)", { color: "#0f766e" }),
+			calls: edgeKind("calls API", "A calls B across a process or network boundary", { color: "#6d28d9" }),
+			build: edgeKind("build / link", "A needs B to build", { dash: "2 4" }),
+			test: edgeKind("test only", "A's tests need B", { dash: "2 4", color: "#64748b" })
+		}
+	},
+	"data-model": {
+		arrow: "Read each relationship both ways. The mark next to an element says how many of it relate to one instance at the other end.",
+		types: {
+			concept: nodeType("Business concept", "round", "blue"),
+			entity: nodeType("Entity", "class", "violet"),
+			table: nodeType("Table / collection", "class", "teal"),
+			class: nodeType("Class", "class", "indigo"),
+			value: nodeType("Value type", "class", "amber"),
+			enum: nodeType("Enumeration", "class", "slate", { stereotype: "enumeration" }),
+			interface: nodeType("Interface", "class", "teal", { stereotype: "interface" })
+		},
+		edges: {
+			relates: edgeKind("relationship", "a business relationship", { head: "none", ends: "text" }),
+			erd: edgeKind("identifying relationship", "the child's identity includes the parent's", { head: "none", ends: "crowsfoot" }),
+			"erd-weak": edgeKind("non-identifying relationship", "the child references the parent", { head: "none", ends: "crowsfoot", dash: "7 5" }),
+			association: edgeKind("association", "instances are linked", { head: "none", ends: "text" }),
+			navigable: edgeKind("navigable association", "A holds a reference to B", { head: "open", ends: "text" }),
+			aggregation: edgeKind("shared aggregation", "A groups B; B can exist alone", { head: "none", tail: "diamond", ends: "text" }),
+			composition: edgeKind("composition", "A owns B; B belongs to one A", { head: "none", tail: "diamond-filled", ends: "text" }),
+			generalization: edgeKind("generalization", "A is a kind of B", { head: "triangle" }),
+			realization: edgeKind("realization", "A implements B", { dash: "7 5", head: "triangle" }),
+			dependency: edgeKind("dependency", "A uses B", { dash: "7 5", head: "open" })
+		}
+	}
+};
+// ===== PRESETS END =====
+
+const MARKS = {
+	"code+check": "read in code and re-checked by hand",
+	code: "traced in code, line numbers not all re-checked",
+	docs: "taken from docs or specs only",
+	inferred: "reasoned from code, not run"
+};
+const STATUS = { proposed: "proposed, not built", illustrative: "illustrative, not from the project", unknown: "not known from the evidence" };
+const INK = "#14142b", SOFT = "#464a66";
+const preset = PRESETS[PAGE.kind] ?? { types: {}, edges: {} };
+const TYPE = { ...preset.types, ...TYPES };
+const KIND = { ...preset.edges, ...EDGE_KINDS };
+const NS = "http://www.w3.org/2000/svg";
+const stepX = GRID.cw + GRID.gx, stepY = GRID.ch + GRID.gy;
+const $ = id => document.getElementById(id);
+
+function el(tag, attrs = {}, parent, text) {
+	const node = document.createElement(tag);
+	for (const [ key, value ] of Object.entries(attrs)) if (value !== undefined && value !== false) node.setAttribute(key, value);
+	if (text !== undefined) node.textContent = text;
+	if (parent) parent.append(node);
+	return node;
+}
+function sv(tag, attrs = {}, parent, text) {
+	const node = document.createElementNS(NS, tag);
+	for (const [ key, value ] of Object.entries(attrs)) if (value !== undefined && value !== false) node.setAttribute(key, value);
+	if (text !== undefined) node.textContent = text;
+	if (parent) parent.append(node);
+	return node;
+}
+function wrap(text, max, limit = 99) {
+	const lines = [];
+	let line = "";
+	for (let word of String(text ?? "").split(/\s+/).filter(Boolean)) {
+		while (word.length > max) {
+			if (line) { lines.push(line); line = ""; }
+			lines.push(word.slice(0, max - 1) + "-");
+			word = word.slice(max - 1);
+		}
+		if (!line) line = word;
+		else if (line.length + 1 + word.length <= max) line += " " + word;
+		else { lines.push(line); line = word; }
+	}
+	if (line) lines.push(line);
+	if (lines.length > limit) {
+		lines.length = limit;
+		lines[limit - 1] = lines[limit - 1].replace(/.{0,2}$/, "…");
+	}
+	return lines;
+}
+const keyOf = node => node.key ?? node.id;
+const edgeId = (edge, index) => edge.id ?? `e${index}`;
+function nodeRect(node) {
+	const w = node.w ?? 1, h = node.h ?? 1;
+	return { x: GRID.pad + node.col * stepX, y: GRID.pad + node.row * stepY, w: w * GRID.cw + (w - 1) * GRID.gx, h: h * GRID.ch + (h - 1) * GRID.gy };
+}
+function gridPoint([ col, row ]) {
+	return { x: GRID.pad + col * stepX + GRID.cw / 2, y: GRID.pad + row * stepY + GRID.ch / 2 };
+}
+function groupDepth(view, group) {
+	let depth = 0, current = group;
+	while (current?.parent && depth < 5) { current = (view.groups ?? []).find(other => other.id === current.parent); depth++; }
+	return depth;
+}
+function groupRect(view, group) {
+	const inset = 8 + groupDepth(view, group) * 12;
+	return { x: GRID.pad + group.col * stepX - GRID.gx / 2 + inset, y: GRID.pad + group.row * stepY - GRID.gy / 2 + inset, w: group.w * stepX - 2 * inset, h: group.h * stepY - 2 * inset };
+}
+function exitPoint(rect, from, toward) {
+	const dx = toward.x - from.x, dy = toward.y - from.y;
+	let t = Infinity;
+	if (dx > 0) t = Math.min(t, (rect.x + rect.w - from.x) / dx);
+	if (dx < 0) t = Math.min(t, (rect.x - from.x) / dx);
+	if (dy > 0) t = Math.min(t, (rect.y + rect.h - from.y) / dy);
+	if (dy < 0) t = Math.min(t, (rect.y - from.y) / dy);
+	if (!Number.isFinite(t)) t = 0;
+	return { x: from.x + dx * t, y: from.y + dy * t };
+}
+const unit = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy) || 1; return { x: dx / length, y: dy / length }; };
+function parseCard(text) {
+	const value = String(text ?? "").trim();
+	if (value === "?" || !value) return null;
+	const [ min, max = min ] = value.split("..");
+	return { min: min === "*" ? "0" : min, many: max === "*" || Number(max) > 1 };
+}
+function canvasSize(view) {
+	let cols = 1, rows = 1;
+	for (const node of view.nodes) { cols = Math.max(cols, node.col + (node.w ?? 1)); rows = Math.max(rows, node.row + (node.h ?? 1)); }
+	for (const group of view.groups ?? []) { cols = Math.max(cols, group.col + group.w); rows = Math.max(rows, group.row + group.h); }
+	for (const edge of view.edges) for (const [ col, row ] of edge.via ?? []) { cols = Math.max(cols, Math.ceil(col + 1)); rows = Math.max(rows, Math.ceil(row + 1)); }
+	return { width: GRID.pad * 2 + cols * stepX - GRID.gx, height: GRID.pad * 2 + rows * stepY - GRID.gy };
+}
+function evBadge(parent, ev, status) {
+	if (ev) el("span", { class: "rounded border border-[#d9dcea] px-1.5 py-0.5 text-xs font-semibold text-[#464a66]", title: MARKS[ev] ?? "" }, parent, `[${ev}]`);
+	if (status) el("span", { class: "rounded bg-[#fef3c7] px-1.5 py-0.5 text-xs font-semibold text-[#92400e]", title: STATUS[status] ?? "" }, parent, status);
+}
+
+const state = { tab: null, view: null, selection: null, opener: null, tour: -1 };
+const views = new Map();
+
+function drawHead(group, type, tip, direction, color) {
+	if (!type || type === "none") return;
+	const normal = { x: -direction.y, y: direction.x };
+	const at = (back, side) => `${tip.x - direction.x * back + normal.x * side},${tip.y - direction.y * back + normal.y * side}`;
+	if (type === "arrow") sv("polygon", { points: `${tip.x},${tip.y} ${at(12, 5.5)} ${at(12, -5.5)}`, fill: color }, group);
+	if (type === "open") sv("polyline", { points: `${at(12, 6)} ${tip.x},${tip.y} ${at(12, -6)}`, fill: "none", stroke: color, "stroke-width": 2 }, group);
+	if (type === "triangle") sv("polygon", { points: `${tip.x},${tip.y} ${at(15, 8)} ${at(15, -8)}`, fill: "#fff", stroke: color, "stroke-width": 2 }, group);
+	if (type === "diamond" || type === "diamond-filled") sv("polygon", { points: `${tip.x},${tip.y} ${at(10, 6.5)} ${at(20, 0)} ${at(10, -6.5)}`, fill: type === "diamond" ? "#fff" : color, stroke: color, "stroke-width": 2 }, group);
+}
+function drawCrow(group, card, point, outward, color) {
+	const parsed = parseCard(card);
+	const normal = { x: -outward.y, y: outward.x };
+	const at = (along, side) => ({ x: point.x + outward.x * along + normal.x * side, y: point.y + outward.y * along + normal.y * side });
+	const line = (a, b) => sv("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: color, "stroke-width": 2 }, group);
+	if (!parsed) {
+		const spot = at(18, 12);
+		sv("text", { x: spot.x, y: spot.y + 4, "text-anchor": "middle", "font-size": 13, "font-weight": 700, fill: "#92400e" }, group, "?");
+		return;
+	}
+	if (parsed.many) { const toe = at(14, 0); line(toe, at(0, 8)); line(toe, at(0, -8)); line(toe, at(0, 0)); }
+	else line(at(8, 7), at(8, -7));
+	if (parsed.min === "0") { const center = at(23, 0); sv("circle", { cx: center.x, cy: center.y, r: 5, fill: "#fff", stroke: color, "stroke-width": 2 }, group); }
+	else line(at(19, 7), at(19, -7));
+}
+function drawEndText(group, text, point, outward, flip) {
+	if (!text) return;
+	const normal = { x: -outward.y, y: outward.x };
+	const side = flip ? -11 : 11;
+	const spot = { x: point.x + outward.x * 16 + normal.x * side, y: point.y + outward.y * 16 + normal.y * side };
+	const width = String(text).length * 7 + 6;
+	sv("rect", { x: spot.x - width / 2, y: spot.y - 9, width, height: 16, rx: 3, fill: "#fff", opacity: 0.9 }, group);
+	sv("text", { x: spot.x, y: spot.y + 3.5, "text-anchor": "middle", "font-size": 12, "font-weight": 600, fill: INK }, group, text);
+}
+function drawBallSocket(group, mid, direction, color) {
+	const normal = { x: -direction.y, y: direction.x };
+	const center = { x: mid.x + direction.x * 4, y: mid.y + direction.y * 4 };
+	const r = 11;
+	const p1 = { x: center.x + normal.x * r, y: center.y + normal.y * r };
+	const back = { x: center.x - direction.x * r, y: center.y - direction.y * r };
+	const p2 = { x: center.x - normal.x * r, y: center.y - normal.y * r };
+	sv("path", { d: `M${p1.x},${p1.y} A${r},${r} 0 0 1 ${back.x},${back.y} A${r},${r} 0 0 1 ${p2.x},${p2.y}`, fill: "none", stroke: color, "stroke-width": 2 }, group);
+	sv("circle", { cx: center.x, cy: center.y, r: 6, fill: "#fff", stroke: color, "stroke-width": 2 }, group);
+}
+
+function drawShape(group, type, rect, dash) {
+	const common = { class: "frame", fill: type.tint, stroke: type.color, "stroke-width": 2.2, "stroke-dasharray": dash };
+	const { x, y, w, h } = rect;
+	if (type.shape === "round") sv("rect", { x, y, width: w, height: h, rx: 12, ...common }, group);
+	else if (type.shape === "person") {
+		sv("rect", { x, y, width: w, height: h, rx: 22, ...common }, group);
+		sv("circle", { cx: x + 18, cy: y + 17, r: 5.5, fill: type.color }, group);
+		sv("path", { d: `M${x + 9},${y + 34} q9,-14 18,0 z`, fill: type.color }, group);
+	}
+	else if (type.shape === "cylinder") {
+		sv("path", { d: `M${x},${y + 10} a${w / 2},10 0 0 1 ${w},0 v${h - 20} a${w / 2},10 0 0 1 ${-w},0 z`, ...common }, group);
+		sv("path", { d: `M${x},${y + 10} a${w / 2},10 0 0 0 ${w},0`, fill: "none", stroke: type.color, "stroke-width": 2, "stroke-dasharray": dash }, group);
+	}
+	else if (type.shape === "store") {
+		sv("rect", { x, y, width: w, height: h, ...common, stroke: "none", class: "frame" }, group);
+		sv("path", { d: `M${x + w},${y} H${x} V${y + h} H${x + w} M${x + 30},${y} V${y + h}`, fill: "none", stroke: type.color, "stroke-width": 2.2, "stroke-dasharray": dash, class: "frame" }, group);
+	}
+	else if (type.shape === "ellipse") sv("ellipse", { cx: x + w / 2, cy: y + h / 2, rx: w / 2, ry: h / 2, ...common }, group);
+	else if (type.shape === "hex") sv("polygon", { points: `${x + 16},${y} ${x + w - 16},${y} ${x + w},${y + h / 2} ${x + w - 16},${y + h} ${x + 16},${y + h} ${x},${y + h / 2}`, ...common }, group);
+	else if (type.shape === "component") {
+		sv("rect", { x, y, width: w, height: h, rx: 3, ...common }, group);
+		sv("rect", { x: x + w - 24, y: y + 8, width: 14, height: 18, fill: "#fff", stroke: type.color, "stroke-width": 1.5 }, group);
+		sv("rect", { x: x + w - 28, y: y + 11, width: 8, height: 4, fill: "#fff", stroke: type.color, "stroke-width": 1.5 }, group);
+		sv("rect", { x: x + w - 28, y: y + 19, width: 8, height: 4, fill: "#fff", stroke: type.color, "stroke-width": 1.5 }, group);
+	}
+	else sv("rect", { x, y, width: w, height: h, rx: type.shape === "class" ? 3 : 4, ...common }, group);
+}
+function drawText(group, node, type, rect) {
+	const { x, y, w, h } = rect;
+	const text = (tx, ty, value, size, weight, fill, anchor = "middle") => sv("text", { x: tx, y: ty, "font-size": size, "font-weight": weight, fill, "text-anchor": anchor }, group, value);
+	if (type.shape === "class" || type.shape === "component") {
+		const stereo = node.stereotype ?? type.stereotype ?? (type.shape === "component" ? "component" : null);
+		let top = y + 8;
+		if (stereo) { text(x + w / 2, top + 11, `«${stereo}»`, 11, 500, SOFT); top += 14; }
+		for (const line of wrap(node.label, Math.floor((w - 40) / 7.6), 2)) { text(x + w / 2, top + 13, line, 13.5, 700, INK); top += 17; }
+		if (node.sub) { text(x + w / 2, top + 11, node.sub, 11, 500, SOFT); top += 14; }
+		const members = node.members ?? [], ops = node.ops ?? [];
+		if (!members.length && !ops.length) {
+			if (node.short) for (const line of wrap(node.short, Math.floor((w - 20) / 6.6), Math.max(1, Math.floor((y + h - top - 12) / 15)))) { text(x + w / 2, top + 16, line, 12, 400, SOFT); top += 15; }
+			return;
+		}
+		top += 5;
+		const max = Math.floor((w - 20) / 6.9);
+		for (const list of [ members, ops ]) {
+			if (!list.length) continue;
+			sv("line", { x1: x, y1: top, x2: x + w, y2: top, stroke: type.color, "stroke-width": 1.4 }, group);
+			top += 4;
+			for (const member of list) {
+				if (top + 15 > y + h - 2) break;
+				text(x + 10, top + 12, member.length > max ? member.slice(0, max - 1) + "…" : member, 12, 400, INK, "start").classList.add("mono");
+				top += 15;
+			}
+			top += 3;
+		}
+		return;
+	}
+	const inner = type.shape === "store" ? { x: x + 30, w: w - 30 } : type.shape === "hex" ? { x: x + 12, w: w - 24 } : type.shape === "ellipse" ? { x: x + w * 0.12, w: w * 0.76 } : { x, w };
+	const label = wrap(node.label, Math.floor((inner.w - 24) / 7.6), 2);
+	const sub = node.sub ? wrap(node.sub, Math.floor((inner.w - 20) / 6.2), 1) : [];
+	const room = h - 16 - label.length * 17 - sub.length * 14;
+	const short = node.short ? wrap(node.short, Math.floor((inner.w - 20) / 6.6), Math.max(0, Math.floor(room / 15))) : [];
+	let top = y + (h - (label.length * 17 + sub.length * 14 + short.length * 15)) / 2;
+	const cx = inner.x + inner.w / 2;
+	for (const line of label) { text(cx, top + 13, line, 13.5, 700, INK); top += 17; }
+	for (const line of sub) { text(cx, top + 11, line, 11, 500, SOFT); top += 14; }
+	for (const line of short) { text(cx, top + 12, line, 12, 400, SOFT); top += 15; }
+}
+function drawInterfaces(group, node, type, rect) {
+	const stub = (list, side) => list.forEach((name, index) => {
+		const y = rect.y + 20 + index * 26;
+		const edge = side === "right" ? rect.x + rect.w : rect.x;
+		const out = side === "right" ? 1 : -1;
+		sv("line", { x1: edge, y1: y, x2: edge + out * 16, y2: y, stroke: type.color, "stroke-width": 2 }, group);
+		if (side === "right") sv("circle", { cx: edge + 22, cy: y, r: 6, fill: "#fff", stroke: type.color, "stroke-width": 2 }, group);
+		else sv("path", { d: `M${edge - 24},${y - 8} A8,8 0 0 1 ${edge - 24},${y + 8}`, fill: "none", stroke: type.color, "stroke-width": 2, transform: `rotate(180 ${edge - 24} ${y})` }, group);
+		sv("text", { "data-outside": "", x: edge + out * 32, y: y + 4, "font-size": 10.5, "font-weight": 600, fill: INK, "text-anchor": side === "right" ? "start" : "end" }, group, name);
+	});
+	stub(node.provides ?? [], "right");
+	stub(node.requires ?? [], "left");
+}
+
+function renderDiagram(view, holder) {
+	const size = canvasSize(view);
+	const svg = sv("svg", { viewBox: `0 0 ${size.width} ${size.height}`, width: size.width, height: size.height, role: "group", "aria-label": `${view.title} diagram` }, holder);
+	sv("title", {}, svg, view.title);
+	sv("desc", {}, svg, view.purpose ?? "");
+	const groupLayer = sv("g", {}, svg), edgeLayer = sv("g", {}, svg), nodeLayer = sv("g", {}, svg), labelLayer = sv("g", {}, svg);
+	const byId = new Map(view.nodes.map(node => [ node.id, node ]));
+	for (const group of [ ...(view.groups ?? []) ].sort((a, b) => groupDepth(view, a) - groupDepth(view, b))) {
+		const rect = groupRect(view, group);
+		sv("rect", { x: rect.x, y: rect.y, width: rect.w, height: rect.h, rx: 14, fill: group.dashed === false ? "#fbfbfe" : "none", stroke: "#8a8fae", "stroke-width": 1.6, "stroke-dasharray": group.dashed === false ? "" : "8 5" }, groupLayer);
+		sv("text", { x: rect.x + 12, y: rect.y + 15, "font-size": 11.5, "font-weight": 700, fill: SOFT, "letter-spacing": ".04em" }, groupLayer, group.label);
+	}
+	const pairs = new Map();
+	view.edges.forEach((edge, index) => {
+		const key = [ edge.from, edge.to ].sort().join("|");
+		if (!pairs.has(key)) pairs.set(key, []);
+		pairs.get(key).push(index);
+	});
+	view.edges.forEach((edge, index) => {
+		const kind = KIND[edge.kind] ?? KIND[Object.keys(KIND)[0]] ?? { color: INK, head: "arrow" };
+		const from = byId.get(edge.from), to = byId.get(edge.to);
+		if (!from || !to) return;
+		const id = edgeId(edge, index);
+		const group = sv("g", { class: "edge", tabindex: 0, role: "button", "data-id": id, "aria-label": `${from.label} ${edge.label ?? kind.label} ${to.label}` }, edgeLayer);
+		const fromRect = nodeRect(from), toRect = nodeRect(to);
+		const center = rect => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
+		let points;
+		if (from === to) {
+			const r = fromRect;
+			const start = { x: r.x + r.w - 36, y: r.y }, end = { x: r.x + r.w, y: r.y + 30 };
+			const d = `M${start.x},${start.y} C${start.x + 10},${start.y - 46} ${end.x + 46},${end.y - 10} ${end.x},${end.y}`;
+			sv("path", { d, fill: "none", stroke: "transparent", "stroke-width": 14 }, group);
+			sv("path", { d, class: "line", fill: "none", stroke: kind.color, "stroke-width": 2, "stroke-dasharray": kind.dash }, group);
+			drawHead(group, kind.head, end, { x: -1, y: 0 }, kind.color);
+			placeLabel(labelLayer, group, edge.label, { x: r.x + r.w + 18, y: r.y - 22 });
+			return;
+		}
+		const pair = pairs.get([ edge.from, edge.to ].sort().join("|"));
+		const offset = (pair.indexOf(index) - (pair.length - 1) / 2) * 16;
+		const [ first, second ] = [ edge.from, edge.to ].sort();
+		const canonical = unit(center(nodeRect(byId.get(first))), center(nodeRect(byId.get(second))));
+		const shift = point => ({ x: point.x - canonical.y * offset, y: point.y + canonical.x * offset });
+		const raw = [ center(fromRect), ...(edge.via ?? []).map(gridPoint), center(toRect) ].map(shift);
+		raw[0] = exitPoint(fromRect, raw[0], raw[1]);
+		raw[raw.length - 1] = exitPoint(toRect, raw[raw.length - 1], raw[raw.length - 2]);
+		points = raw;
+		const d = points.map((point, i) => `${i ? "L" : "M"}${point.x},${point.y}`).join(" ");
+		sv("path", { d, fill: "none", stroke: "transparent", "stroke-width": 14 }, group);
+		sv("path", { d, class: "line", fill: "none", stroke: kind.color, "stroke-width": 2, "stroke-dasharray": kind.dash, "stroke-linejoin": "round" }, group);
+		const last = points.length - 1;
+		const inDir = unit(points[last - 1], points[last]);
+		const outDir = unit(points[0], points[1]);
+		drawHead(group, kind.head, points[last], inDir, kind.color);
+		drawHead(group, kind.tail, points[0], { x: -outDir.x, y: -outDir.y }, kind.color);
+		if (kind.ends === "crowsfoot") {
+			drawCrow(group, edge.fromEnd, points[0], outDir, kind.color);
+			drawCrow(group, edge.toEnd, points[last], { x: -inDir.x, y: -inDir.y }, kind.color);
+		}
+		if (kind.ends === "text") {
+			drawEndText(group, edge.fromEnd, points[0], outDir, false);
+			drawEndText(group, edge.toEnd, points[last], { x: -inDir.x, y: -inDir.y }, true);
+		}
+		let best = 0, length = -1;
+		for (let i = 0; i < last; i++) {
+			const segment = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+			if (segment > length) { length = segment; best = i; }
+		}
+		const along = pair.length > 1 ? 0.5 + (pair.indexOf(index) - (pair.length - 1) / 2) * (0.36 / (pair.length - 1)) * (edge.from === first ? 1 : -1) : 0.5;
+		const mid = { x: points[best].x + (points[best + 1].x - points[best].x) * along, y: points[best].y + (points[best + 1].y - points[best].y) * along };
+		if (kind.mid === "ballsocket") drawBallSocket(group, mid, unit(points[best], points[best + 1]), kind.color);
+		placeLabel(labelLayer, group, edge.label, kind.mid === "ballsocket" ? { x: mid.x, y: mid.y - 22 } : mid, labelChars(points[best], points[best + 1]));
+	});
+	for (const node of view.nodes) {
+		const type = TYPE[node.type] ?? { label: node.type, shape: "rect", color: "#475569", tint: "#f1f5f9" };
+		const rect = nodeRect(node);
+		const dash = node.status === "illustrative" || type.dotted ? "2 4" : node.status === "proposed" || type.dashed ? "7 5" : "";
+		const group = sv("g", { class: "node", tabindex: 0, role: "button", "data-id": node.id, "aria-label": `${node.label}, ${type.label}` }, nodeLayer);
+		sv("rect", { class: "ring", x: rect.x - 6, y: rect.y - 6, width: rect.w + 12, height: rect.h + 12, rx: 16, fill: "none", stroke: "#1d4ed8", "stroke-width": 2.5 }, group);
+		drawShape(group, type, rect, dash);
+		drawText(group, node, type, rect);
+		drawInterfaces(group, node, type, rect);
+		if (node.status) {
+			const label = node.status === "unknown" ? "?" : node.status;
+			const width = label.length * 6.6 + 12;
+			sv("rect", { x: rect.x + rect.w - width - 6, y: rect.y - 9, width, height: 18, rx: 9, fill: "#fef3c7", stroke: "#b45309", "stroke-width": 1.2 }, group);
+			sv("text", { "data-outside": "", x: rect.x + rect.w - width / 2 - 6, y: rect.y + 4, "font-size": 11, "font-weight": 700, fill: "#92400e", "text-anchor": "middle" }, group, label);
+		}
+		if (node.ev) sv("text", { x: rect.x + rect.w - (type.shape === "ellipse" || type.shape === "hex" ? rect.w * 0.2 : 6), y: rect.y + rect.h - (type.shape === "cylinder" ? 13 : 6), "font-size": 9.5, "font-weight": 600, fill: SOFT, "text-anchor": "end" }, group, node.ev);
+	}
+	return svg;
+}
+function placeLabel(layer, edgeGroup, label, at, chars = 24) {
+	if (!label) return;
+	const lines = wrap(label, chars, 3);
+	const width = Math.max(...lines.map(line => line.length)) * 6.4 + 12, height = lines.length * 14 + 6;
+	const group = sv("g", { "data-for": edgeGroup.dataset.id, class: "elabel" }, layer);
+	sv("rect", { x: at.x - width / 2, y: at.y - height / 2, width, height, rx: 4, fill: "#fff", opacity: 0.94 }, group);
+	lines.forEach((line, i) => sv("text", { x: at.x, y: at.y - height / 2 + 14 + i * 14, "font-size": 11.5, "font-weight": 500, fill: INK, "text-anchor": "middle" }, group, line));
+	group.addEventListener("click", () => edgeGroup.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+	group.style.cursor = "pointer";
+}
+
+function legendFor(view, holder) {
+	const legend = el("div", { class: "flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-[#464a66]" }, holder);
+	el("b", { class: "text-[#14142b]" }, legend, view.arrow ?? preset.arrow ?? "");
+	const usedTypes = [ ...new Set(view.nodes.map(node => node.type)) ];
+	for (const name of usedTypes) {
+		const type = TYPE[name];
+		if (!type) continue;
+		const item = el("span", { class: "inline-flex items-center gap-1.5" }, legend);
+		const swatch = sv("svg", { width: 22, height: 14, "aria-hidden": "true" }, item);
+		sv("rect", { x: 1, y: 1, width: 20, height: 12, rx: type.shape === "round" || type.shape === "person" ? 4 : 1, fill: type.tint, stroke: type.color, "stroke-width": 2, "stroke-dasharray": type.dotted ? "2 2" : type.dashed ? "4 2" : "" }, swatch);
+		el("span", {}, item, type.label);
+	}
+	umlLegend(view, legend);
+	for (const name of [ ...new Set(view.edges.map(edge => edge.kind)) ]) {
+		const kind = KIND[name];
+		if (!kind) continue;
+		const item = el("span", { class: "inline-flex items-center gap-1.5", title: kind.meaning }, legend);
+		const ballsocket = kind.mid === "ballsocket";
+		const swatch = sv("svg", { width: ballsocket ? 52 : 34, height: ballsocket ? 28 : 14, "aria-hidden": "true" }, item);
+		const y = ballsocket ? 14 : 7;
+		sv("line", { x1: 2, y1: y, x2: ballsocket ? 50 : 30, y2: y, stroke: kind.color, "stroke-width": 2, "stroke-dasharray": kind.dash }, swatch);
+		if (ballsocket) drawBallSocket(swatch, { x: 26, y }, { x: 1, y: 0 }, kind.color);
+		else drawHead(swatch, kind.head === "none" ? "none" : kind.head, { x: 32, y: 7 }, { x: 1, y: 0 }, kind.color);
+		el("span", {}, item, `${kind.label}: ${kind.meaning}`);
+	}
+	for (const status of [ ...new Set(view.nodes.map(node => node.status).filter(Boolean)) ]) evBadge(el("span", { class: "inline-flex items-center gap-1.5" }, legend), null, status);
+}
+
+function umlLegend(view, legend) {
+	const component = view.nodes.map(node => TYPE[node.type]).find(type => type?.shape === "component");
+	const color = component?.color ?? view.nodes.map(node => TYPE[node.type]).find(type => type)?.color ?? INK;
+	const entry = (width, draw, label) => {
+		const item = el("span", { class: "inline-flex items-center gap-1.5" }, legend);
+		draw(sv("svg", { width, height: 22, "aria-hidden": "true" }, item));
+		el("span", {}, item, label);
+	};
+	if (component) entry(22, swatch => {
+		sv("rect", { x: 5, y: 2, width: 14, height: 18, fill: "#fff", stroke: color, "stroke-width": 1.5 }, swatch);
+		sv("rect", { x: 1, y: 5, width: 8, height: 4, fill: "#fff", stroke: color, "stroke-width": 1.5 }, swatch);
+		sv("rect", { x: 1, y: 13, width: 8, height: 4, fill: "#fff", stroke: color, "stroke-width": 1.5 }, swatch);
+	}, "Component icon (with «component»): a replaceable unit that does its work behind interfaces");
+	if (view.nodes.some(node => node.provides?.length)) entry(34, swatch => {
+		sv("line", { x1: 2, y1: 11, x2: 18, y2: 11, stroke: color, "stroke-width": 2 }, swatch);
+		sv("circle", { cx: 24, cy: 11, r: 6, fill: "#fff", stroke: color, "stroke-width": 2 }, swatch);
+	}, "Ball (lollipop), right side: provided interface, the component offers it");
+	if (view.nodes.some(node => node.requires?.length)) entry(34, swatch => {
+		sv("line", { x1: 32, y1: 11, x2: 16, y2: 11, stroke: color, "stroke-width": 2 }, swatch);
+		sv("path", { d: "M8,3 A8,8 0 0 1 8,19", fill: "none", stroke: color, "stroke-width": 2, transform: "rotate(180 8 11)" }, swatch);
+	}, "Socket (half circle), left side: required interface, the component needs it");
+}
+
+function relationText(view, edge) {
+	const byId = new Map(view.nodes.map(node => [ node.id, node ]));
+	const kind = KIND[edge.kind] ?? {};
+	const from = byId.get(edge.from)?.label ?? edge.from, to = byId.get(edge.to)?.label ?? edge.to;
+	if (kind.ends === "crowsfoot" || kind.ends === "text") return `${from} [${edge.fromEnd ?? "?"}] — ${edge.label ?? kind.label} — [${edge.toEnd ?? "?"}] ${to}`;
+	return `${from} → ${to}: ${edge.label ?? kind.label}`;
+}
+
+function renderView(view, panel) {
+	const section = el("section", { class: "grid gap-3 rounded-xl border border-[#d9dcea] bg-white p-4 sm:p-5 min-w-0 md:min-w-[var(--diagram-w,0px)]", id: `view-${view.id}`, "aria-labelledby": `title-${view.id}` }, panel);
+	const head = el("div", { class: "grid gap-1.5" }, section);
+	const crumbs = el("div", { class: "flex flex-wrap gap-x-4 gap-y-1 text-[13px]" }, head);
+	if (view.parent) {
+		const parent = VIEWS.find(other => other.id === view.parent);
+		if (parent) {
+			const link = el("a", { href: `#view-${parent.id}`, class: "underline text-[#1d4ed8]" }, crumbs, `↑ Part of: ${parent.title}`);
+			link.addEventListener("click", event => { event.preventDefault(); jump(parent.id); });
+		}
+	}
+	for (const child of VIEWS.filter(other => other.parent === view.id)) {
+		const link = el("a", { href: `#view-${child.id}`, class: "underline text-[#1d4ed8]" }, crumbs, `↓ Zoom in: ${child.title}`);
+		link.addEventListener("click", event => { event.preventDefault(); jump(child.id); });
+	}
+	el("h2", { class: "text-xl font-extrabold", id: `title-${view.id}` }, head, view.title);
+	el("p", { class: "max-w-[95ch]" }, head, view.purpose);
+	if (view.read) el("p", { class: "max-w-[95ch] text-[14px] text-[#464a66] [&_code]:mono" }, head).innerHTML = view.read;
+	if (view.scope) el("p", { class: "text-[13px] text-[#464a66]" }, head, `Scope: ${view.scope}`);
+	if (view.gap) {
+		const gap = el("p", { class: "rounded-lg border border-[#f3d37a] bg-[#fffbea] px-3 py-2 text-sm" }, section);
+		el("b", {}, gap, "Missing detail: ");
+		gap.append(view.gap);
+	}
+	if (!view.nodes.length) return;
+	legendFor(view, section);
+	const holder = el("figure", { class: "diagram m-0 overflow-auto md:overflow-visible rounded-lg border border-[#e6e8f2] bg-white max-h-[82vh] md:max-h-none" }, section);
+	const svg = renderDiagram(view, holder);
+	section.style.setProperty("--diagram-w", `${Number(svg.getAttribute("width")) + 42}px`);
+	const list = el("details", { class: "text-[14px]" }, section);
+	el("summary", { class: "cursor-pointer font-semibold" }, list, `Relationships as text (${view.edges.length})`);
+	const ul = el("ul", { class: "mt-2 grid gap-1" }, list);
+	view.edges.forEach((edge, index) => {
+		const li = el("li", {}, ul);
+		const button = el("button", { type: "button", class: "relbtn w-full text-left rounded px-2 py-1 hover:bg-[#f2f3fa] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]", "data-id": edgeId(edge, index) }, li, relationText(view, edge));
+		if (edge.ev) el("span", { class: "ml-2 text-xs text-[#464a66]" }, button, `[${edge.ev}]`);
+		button.addEventListener("click", () => select(view, "edge", edgeId(edge, index), button));
+	});
+	views.set(view.id, { view, section, svg, list: ul });
+	svg.addEventListener("click", event => {
+		const target = event.target.closest(".node, .edge");
+		if (target) select(view, target.classList.contains("node") ? "node" : "edge", target.dataset.id, target);
+	});
+	svg.addEventListener("keydown", event => {
+		if (event.key !== "Enter" && event.key !== " ") return;
+		const target = event.target.closest(".node, .edge");
+		if (!target) return;
+		event.preventDefault();
+		select(view, target.classList.contains("node") ? "node" : "edge", target.dataset.id, target);
+	});
+}
+
+function highlight(viewId, nodeIds, edgeIds) {
+	for (const { svg, list } of views.values()) {
+		svg.querySelectorAll(".dim, .sel").forEach(item => item.classList.remove("dim", "sel"));
+		list.querySelectorAll(".sel").forEach(item => item.classList.remove("sel"));
+	}
+	const entry = views.get(viewId);
+	if (!entry || (!nodeIds && !edgeIds)) return;
+	entry.svg.querySelectorAll(".node").forEach(item => item.classList.toggle("dim", !nodeIds.has(item.dataset.id)));
+	entry.svg.querySelectorAll(".edge").forEach(item => item.classList.toggle("dim", !edgeIds.has(item.dataset.id)));
+	entry.svg.querySelectorAll(".elabel").forEach(item => item.classList.toggle("dim", !edgeIds.has(item.dataset.for)));
+	entry.list.querySelectorAll(".relbtn").forEach(item => item.classList.toggle("sel", edgeIds.has(item.dataset.id)));
+}
+function markSelected(viewId, id) {
+	const entry = views.get(viewId);
+	entry?.svg.querySelector(`[data-id="${CSS.escape(id)}"]`)?.classList.add("sel");
+}
+function reach(view, start, direction) {
+	const nodes = new Set([ start ]), edges = new Set(), queue = [ start ];
+	while (queue.length) {
+		const current = queue.shift();
+		view.edges.forEach((edge, index) => {
+			const [ here, there ] = direction === "out" ? [ edge.from, edge.to ] : [ edge.to, edge.from ];
+			if (here !== current) return;
+			edges.add(edgeId(edge, index));
+			if (!nodes.has(there)) { nodes.add(there); queue.push(there); }
+		});
+	}
+	return { nodes, edges };
+}
+
+function select(view, kind, id, opener) {
+	state.view = view.id;
+	state.selection = { kind, id };
+	state.opener = opener;
+	const panel = $("detail");
+	panel.replaceChildren();
+	const byId = new Map(view.nodes.map(node => [ node.id, node ]));
+	const close = el("button", { type: "button", class: "justify-self-end -mb-7 rounded-md border border-[#d9dcea] px-2 py-0.5 text-sm focus-visible:ring-2 focus-visible:ring-[#1d4ed8]", "aria-label": "Close details" }, panel, "Close");
+	close.addEventListener("click", closeDetail);
+	let item, color, refs, related = [];
+	if (kind === "node") {
+		item = byId.get(id);
+		const type = TYPE[item.type] ?? {};
+		color = type.color;
+		const tag = el("div", { class: "flex flex-wrap items-center gap-2 pr-16" }, panel);
+		el("span", { class: "rounded px-2 py-0.5 text-xs font-bold text-white", style: `background:${type.color}` }, tag, type.label ?? item.type);
+		evBadge(tag, item.ev, item.status);
+		el("h3", { class: "text-lg font-extrabold leading-tight", id: "detailTitle" }, panel, item.label);
+		if (item.sub) el("p", { class: "text-sm text-[#464a66] -mt-2" }, panel, item.sub);
+		const nodeIds = new Set([ id ]), edgeIds = new Set();
+		view.edges.forEach((edge, index) => {
+			if (edge.from !== id && edge.to !== id) return;
+			edgeIds.add(edgeId(edge, index));
+			nodeIds.add(edge.from); nodeIds.add(edge.to);
+			related.push([ edge, index ]);
+		});
+		highlight(view.id, nodeIds, edgeIds);
+		refs = item.refs;
+	} else {
+		const index = view.edges.findIndex((edge, i) => edgeId(edge, i) === id);
+		item = view.edges[index];
+		const kindInfo = KIND[item.kind] ?? {};
+		color = kindInfo.color ?? INK;
+		const tag = el("div", { class: "flex flex-wrap items-center gap-2 pr-16" }, panel);
+		el("span", { class: "rounded px-2 py-0.5 text-xs font-bold text-white", style: `background:${kindInfo.color ?? INK}` }, tag, kindInfo.label ?? item.kind);
+		evBadge(tag, item.ev, item.status);
+		el("h3", { class: "text-lg font-extrabold leading-tight", id: "detailTitle" }, panel, relationText(view, item));
+		if (kindInfo.meaning) el("p", { class: "text-sm text-[#464a66] -mt-1" }, panel, `Arrow meaning: ${kindInfo.meaning}.`);
+		highlight(view.id, new Set([ item.from, item.to ]), new Set([ id ]));
+		refs = item.refs;
+	}
+	markSelected(view.id, id);
+	panel.style.borderColor = color ?? INK;
+	el("p", { class: "text-xs text-[#464a66]" }, panel, `View: ${view.title}`);
+	const twin = field => kind === "node" && item[field] === undefined ? VIEWS.flatMap(other => other.nodes).find(node => keyOf(node) === keyOf(item) && node[field] !== undefined)?.[field] : undefined;
+	const short = item.short ?? twin("short"), detail = item.detail ?? twin("detail");
+	refs ??= twin("refs");
+	if (short && kind === "node") el("p", { class: "font-medium" }, panel, short);
+	if (detail) el("p", {}, panel, detail);
+	else el("p", { class: "text-sm italic text-[#464a66]" }, panel, "No further detail recorded.");
+	if (kind === "node" && (item.members?.length || item.ops?.length)) {
+		const box = el("ul", { class: "grid gap-0.5 rounded-lg bg-[#f6f7fb] px-3 py-2 text-[13px]" }, panel);
+		for (const member of [ ...(item.members ?? []), ...(item.ops ?? []) ]) el("li", { class: "mono" }, box, member);
+	}
+	if (related.length) {
+		const outgoing = related.filter(([ edge ]) => edge.from === id), incoming = related.filter(([ edge ]) => edge.to === id && edge.from !== id);
+		for (const [ title, list, pick ] of [ [ "Outgoing", outgoing, edge => edge.to ], [ "Incoming", incoming, edge => edge.from ] ]) {
+			if (!list.length) continue;
+			el("p", { class: "text-xs font-bold uppercase tracking-[0.08em] text-[#464a66]" }, panel, `${title} (${list.length})`);
+			const ul = el("ul", { class: "grid gap-0.5 text-[14px]" }, panel);
+			for (const [ edge, index ] of list) {
+				const button = el("button", { type: "button", class: "text-left underline decoration-[#c5c9de] hover:decoration-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8] rounded" }, el("li", {}, ul), `${edge.label ?? KIND[edge.kind]?.label ?? edge.kind} — ${byId.get(pick(edge))?.label ?? pick(edge)}`);
+				button.addEventListener("click", () => select(view, "edge", edgeId(edge, index), state.opener));
+			}
+		}
+	}
+	const trace = view.trace ?? preset.trace?.[view.notation] ?? preset.trace?.default;
+	if (kind === "node" && trace) {
+		const row = el("div", { class: "flex flex-wrap gap-2" }, panel);
+		for (const direction of [ "out", "in" ]) {
+			const button = el("button", { type: "button", class: "rounded-md border border-[#d9dcea] px-2.5 py-1 text-sm hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" }, row, trace[direction]);
+			button.addEventListener("click", () => {
+				const found = reach(view, id, direction);
+				highlight(view.id, found.nodes, found.edges);
+				markSelected(view.id, id);
+				const names = [ ...found.nodes ].filter(other => other !== id).map(other => byId.get(other)?.label ?? other);
+				note.textContent = names.length ? `${trace[direction]}: ${names.join(", ")}. Reachable is a review scope, not proof that each one breaks or runs.` : `${trace[direction]}: none in this view.`;
+			});
+		}
+		const note = el("p", { class: "text-sm text-[#464a66]", "aria-live": "polite" }, panel);
+	}
+	if (kind === "node") {
+		const others = VIEWS.filter(other => other.id !== view.id && other.nodes.some(node => keyOf(node) === keyOf(item)));
+		const zoom = VIEWS.filter(other => other.parent === view.id && other.focus === keyOf(item));
+		if (zoom.length || others.length) {
+			el("p", { class: "text-xs font-bold uppercase tracking-[0.08em] text-[#464a66]" }, panel, "In other views");
+			const ul = el("ul", { class: "grid gap-0.5 text-[14px]" }, panel);
+			for (const other of zoom) jumpButton(ul, other, `Zoom in: ${other.title}`, null);
+			for (const other of others) jumpButton(ul, other, other.title, other.nodes.find(node => keyOf(node) === keyOf(item)).id);
+		}
+	}
+	if (refs?.length) {
+		el("p", { class: "text-xs font-bold uppercase tracking-[0.08em] text-[#464a66]" }, panel, "References");
+		const ul = el("ul", { class: "grid gap-0.5 text-[13px] break-words" }, panel);
+		for (const ref of refs) {
+			const li = el("li", {}, ul);
+			if (/^https?:\/\//.test(ref)) el("a", { href: ref, class: "underline", target: "_blank", rel: "noopener" }, li, ref);
+			else el("code", {}, li, ref);
+		}
+	}
+	panel.hidden = false;
+	close.focus({ preventScroll: true });
+}
+function jumpButton(parent, view, text, nodeId) {
+	const button = el("button", { type: "button", class: "text-left underline decoration-[#c5c9de] hover:decoration-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8] rounded" }, el("li", {}, parent), text);
+	button.addEventListener("click", () => {
+		jump(view.id);
+		if (nodeId) {
+			const target = views.get(view.id)?.svg.querySelector(`.node[data-id="${CSS.escape(nodeId)}"]`);
+			select(view, "node", nodeId, target);
+		}
+	});
+}
+function closeDetail() {
+	$("detail").hidden = true;
+	highlight(null);
+	state.selection = null;
+	if (state.opener?.isConnected && state.opener.getClientRects().length) state.opener.focus({ preventScroll: true });
+}
+
+const tabs = [ ...new Set(VIEWS.map(view => view.tab ?? view.title)) ];
+function activate(tab, focus) {
+	if (state.tab !== tab && state.selection) closeDetail();
+	state.tab = tab;
+	document.querySelectorAll(".tab").forEach(button => {
+		const on = button.dataset.tab === tab;
+		button.setAttribute("aria-selected", on);
+		button.tabIndex = on ? 0 : -1;
+		if (on && focus) button.focus();
+	});
+	document.querySelectorAll(".panel").forEach(panel => { panel.hidden = panel.dataset.tab !== tab; });
+}
+function jump(viewId) {
+	const view = VIEWS.find(other => other.id === viewId);
+	if (!view) return;
+	activate(view.tab ?? view.title);
+	history.replaceState(null, "", `#view-${viewId}`);
+	document.getElementById(`view-${viewId}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+function showTour(index) {
+	state.tour = index;
+	const step = TOUR[index];
+	const view = VIEWS.find(other => other.id === step.view);
+	$("tour").hidden = false;
+	$("tourCount").textContent = `Step ${index + 1} of ${TOUR.length}`;
+	$("tourView").textContent = view ? `· ${view.title}` : "";
+	$("tourText").textContent = step.text;
+	$("tourPrev").disabled = index === 0;
+	$("tourNext").disabled = index === TOUR.length - 1;
+	if (!view) return;
+	if (state.selection) closeDetail();
+	activate(view.tab ?? view.title);
+	highlight(view.id, new Set(step.nodes ?? []), new Set(step.edges ?? []));
+	views.get(view.id)?.section.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+function boot() {
+	document.title = PAGE.title;
+	$("eyebrow").textContent = PAGE.eyebrow ?? "";
+	$("title").textContent = PAGE.title;
+	$("intro").textContent = PAGE.intro ?? "";
+	$("sourceNote").innerHTML = PAGE.sourceNote ?? "";
+	el("b", { class: "text-[#14142b]" }, $("evLegend"), "Evidence marks:");
+	for (const [ mark, meaning ] of Object.entries(MARKS)) el("span", {}, $("evLegend"), `[${mark}] ${meaning}`);
+	tabs.forEach((tab, index) => {
+		const button = el("button", { type: "button", role: "tab", class: "tab rounded-lg border border-[#d9dcea] bg-white px-3 py-1.5 text-sm font-semibold hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]", "data-tab": tab, id: `tab-${index}`, "aria-controls": `panel-${index}` }, $("tabs"), tab);
+		button.addEventListener("click", () => activate(tab));
+		button.addEventListener("keydown", event => {
+			const move = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+			if (!move) return;
+			event.preventDefault();
+			activate(tabs[(index + move + tabs.length) % tabs.length], true);
+		});
+		const panel = el("div", { class: "panel grid gap-6", role: "tabpanel", "data-tab": tab, id: `panel-${index}`, "aria-labelledby": `tab-${index}` }, $("panels"));
+		for (const view of VIEWS.filter(other => (other.tab ?? other.title) === tab)) renderView(view, panel);
+	});
+	const initial = VIEWS.find(view => `#view-${view.id}` === location.hash);
+	activate(initial ? initial.tab ?? initial.title : tabs[0]);
+	if (initial) requestAnimationFrame(() => document.getElementById(`view-${initial.id}`)?.scrollIntoView({ block: "start" }));
+	$("clear").addEventListener("click", () => { closeDetail(); $("tour").hidden = true; });
+	if (TOUR.length) {
+		$("tourStart").hidden = false;
+		$("tourStart").addEventListener("click", () => showTour(0));
+		$("tourPrev").addEventListener("click", () => showTour(Math.max(0, state.tour - 1)));
+		$("tourNext").addEventListener("click", () => showTour(Math.min(TOUR.length - 1, state.tour + 1)));
+		$("tourExit").addEventListener("click", () => { $("tour").hidden = true; highlight(null); });
+	}
+	if (QUIZ.length) {
+		$("quiz").hidden = false;
+		for (const item of QUIZ) {
+			const details = el("details", { class: "rounded-lg border border-[#d9dcea] bg-white px-4 py-2.5" }, $("quizList"));
+			el("summary", { class: "cursor-pointer font-semibold" }, details, item.q);
+			el("p", { class: "mt-2 text-[#464a66]" }, details, item.a);
+		}
+	}
+	if (GLOSSARY.length) {
+		$("glossary").hidden = false;
+		for (const [ term, meaning ] of GLOSSARY) { el("dt", { class: "font-semibold" }, $("glossaryList"), term); el("dd", { class: "text-[#464a66]" }, $("glossaryList"), meaning); }
+	}
+	if (NOTES) {
+		$("notes").hidden = false;
+		$("notes").innerHTML = NOTES;
+	}
+	if (SOURCES.length) {
+		$("sources").hidden = false;
+		for (const source of SOURCES) {
+			const li = el("li", {}, $("sourceList"));
+			if (source.href) el("a", { href: source.href }, li, source.label);
+			else el("span", {}, li, source.label);
+			if (source.note) li.append(` — ${source.note}`);
+		}
+	}
+	document.addEventListener("keydown", event => { if (event.key === "Escape" && !$("detail").hidden) closeDetail(); });
+	window.addEventListener("beforeprint", () => document.querySelectorAll("details").forEach(item => { item.open = true; }));
+}
+boot();
+</script>
+</body>
+</html>

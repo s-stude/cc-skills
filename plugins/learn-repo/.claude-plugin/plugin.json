@@ -1,0 +1,7 @@
+{
+	"name": "learn-repo",
+	"description": "Turn findings about a codebase into interactive HTML learning pages: C4 architecture, data flow, data model, module dependencies and process swimlanes. Built from shared templates and checked by scripts.",
+	"version": "0.1.0",
+	"author": { "name": "Akim Khalilov" },
+	"keywords": [ "diagram", "architecture", "c4", "data-flow", "data-model", "dependencies", "swimlane", "learning" ]
+}

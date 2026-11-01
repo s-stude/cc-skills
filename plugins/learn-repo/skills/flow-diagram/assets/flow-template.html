@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FLOW TITLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+	theme: {
+		extend: {
+			fontFamily: {
+				display: [ "Archivo", "Helvetica Neue", "Arial", "sans-serif" ],
+				sans: [ "IBM Plex Sans", "Segoe UI", "system-ui", "sans-serif" ],
+				mono: [ "IBM Plex Mono", "ui-monospace", "SF Mono", "Menlo", "monospace" ]
+			},
+			colors: {
+				ink: { DEFAULT: "#14142b", soft: "#464a66" },
+				line: "#d9dcea",
+				branch: { DEFAULT: "#b45309", bg: "#fff4d6" }
+			}
+		}
+	}
+};
+</script>
+<style>
+:root { color-scheme: light; --ink: #14142b; --ink-soft: #464a66; --line: #d9dcea; --arrow: #1e1b3a; --branch: #b45309; --branch-bg: #fff4d6; }
+[hidden] { display: none !important; }
+.map svg, .lanehead svg { display: block; min-width: 1180px; width: 100%; height: auto; }
+.step { cursor: pointer; }
+.step .frame { transition: stroke-width .12s; }
+.step:hover .frame, .step.sel .frame { stroke-width: 4; }
+.dim, .lane-dim { opacity: 0.18; }
+svg text { font-family: "IBM Plex Sans", sans-serif; }
+.chip[aria-pressed="true"] { background: var(--c, #14142b); color: #fff; }
+.chip[aria-pressed="true"] .dot { background: #fff; }
+li.sel { border-color: var(--c); box-shadow: 0 0 0 2px var(--c); }
+@media (max-width: 699px), (max-height: 699px) { .pinned { position: static !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body class="bg-[#f7f8fc] text-ink font-sans text-[15px] leading-relaxed antialiased pb-32 pt-7 px-4">
+<div class="mx-auto max-w-[1520px] grid gap-7">
+
+<header class="grid gap-3">
+	<span class="text-xs font-semibold uppercase tracking-[0.12em] text-ink-soft" id="eyebrow"></span>
+	<h1 class="font-display font-extrabold text-[clamp(28px,4vw,44px)] leading-[1.08] tracking-tight text-balance" id="title"></h1>
+	<p class="text-ink-soft max-w-[80ch]" id="intro"></p>
+	<p class="text-[13px] text-ink-soft [&_code]:font-mono [&_code]:text-[0.86em] [&_a]:underline" id="sourceNote"></p>
+</header>
+
+<div class="grid">
+<div class="pinned sticky top-0 z-[15] bg-[#f7f8fc] grid gap-2.5 pt-2">
+<section class="grid gap-2.5 rounded-xl border border-line bg-white px-4 py-3" aria-label="Map controls">
+	<div class="flex flex-wrap items-center gap-2" id="scenarios">
+		<span class="min-w-[92px] text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft">Scenario</span>
+	</div>
+	<p class="rounded-lg border border-[#f3d37a] bg-[#fffbea] px-3 py-2 text-sm" id="scenarioNote" hidden></p>
+	<div class="flex flex-wrap items-center gap-2" id="lanes">
+		<span class="min-w-[92px] text-xs font-semibold uppercase tracking-[0.08em] text-ink-soft">Layer</span>
+	</div>
+	<div class="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink-soft" id="legend"></div>
+</section>
+<div class="lanehead overflow-hidden rounded-t-xl border border-b-0 border-line bg-white shadow-[0_6px_10px_-8px_rgba(20,20,43,.35)]" id="laneheadWrap"><svg id="lanehead" aria-hidden="true"></svg></div>
+</div>
+
+<figure class="map m-0 overflow-x-auto rounded-b-xl border border-t-0 border-line bg-white" id="mapWrap">
+	<svg id="map" role="img" aria-label="Swimlane diagram"></svg>
+</figure>
+</div>
+
+<!-- ===== CARDS START ===== Reference cards. Keep 2–4. Replace the contents; keep the classes. -->
+<section class="grid gap-[18px] [grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr))]" aria-label="Reference tables">
+	<div class="grid content-start gap-2.5 rounded-xl border border-line bg-white p-4 min-w-0">
+		<h3 class="font-display text-base font-bold">Messages and calls</h3>
+		<div class="overflow-x-auto"><table class="w-full border-collapse text-[13.5px]">
+			<thead><tr class="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-soft"><th class="border-b border-line px-2 py-1.5">Name</th><th class="border-b border-line px-2 py-1.5">Direction</th><th class="border-b border-line px-2 py-1.5">Meaning</th></tr></thead>
+			<tbody class="[&_td]:border-b [&_td]:border-line [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top [&_code]:font-mono [&_code]:text-[12px]">
+				<tr><td><code>example.request</code></td><td>client → server</td><td>What it carries and which step sends it (step 2)</td></tr>
+				<tr><td><code>example.result</code></td><td>server → client</td><td>What comes back (step 5)</td></tr>
+			</tbody>
+		</table></div>
+		<p class="text-[13px] text-ink-soft">One or two sentences the table cannot say: an exception, a thing the reader would otherwise assume. [✓]</p>
+	</div>
+	<div class="grid content-start gap-2.5 rounded-xl border border-line bg-white p-4 min-w-0">
+		<h3 class="font-display text-base font-bold">What gets stored or changed</h3>
+		<div class="overflow-x-auto"><table class="w-full border-collapse text-[13.5px]">
+			<thead><tr class="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-soft"><th class="border-b border-line px-2 py-1.5">Where</th><th class="border-b border-line px-2 py-1.5">What</th><th class="border-b border-line px-2 py-1.5">Step</th></tr></thead>
+			<tbody class="[&_td]:border-b [&_td]:border-line [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top [&_code]:font-mono [&_code]:text-[12px]">
+				<tr><td>Database table</td><td>Row written per run</td><td>5</td></tr>
+				<tr><td>Main record</td><td><b>Nothing changes until the user confirms.</b></td><td>6</td></tr>
+			</tbody>
+		</table></div>
+	</div>
+</section>
+<!-- ===== CARDS END ===== -->
+
+<section class="grid gap-3.5">
+	<div class="flex flex-wrap items-baseline gap-3">
+		<h2 class="font-display text-2xl font-extrabold">All steps as a list</h2>
+		<p class="text-[13px] text-ink-soft">Same numbering as the map. Click a step to highlight it above. Steps outside the chosen scenario are faded.</p>
+	</div>
+	<ol class="grid gap-2.5 list-none m-0 p-0" id="list"></ol>
+</section>
+
+<!-- ===== LIMITS START ===== Optional closing list. Delete the section if the research has nothing to put here. -->
+<section class="grid gap-3 max-w-[80ch]">
+	<h2 class="font-display text-2xl font-extrabold">Limits worth knowing</h2>
+	<ul class="grid gap-2 pl-5 list-disc text-ink-soft [&_code]:font-mono [&_code]:text-[12px]">
+		<li>A constraint the diagram cannot show as a box: a timeout, a sampling rule, a thing that is silently skipped. [code]</li>
+	</ul>
+</section>
+<!-- ===== LIMITS END ===== -->
+
+</div>
+
+<aside class="fixed bottom-4 right-4 z-20 grid w-[min(440px,calc(100vw-32px))] max-h-[min(70vh,560px)] gap-2.5 overflow-auto rounded-xl border-2 bg-white px-[18px] py-4 shadow-[0_12px_40px_rgba(20,20,43,.18)] [border-color:var(--c)]" id="detail" hidden aria-live="polite"></aside>
+
+<script>
+// ===== DATA START =====
+// Everything a new diagram changes lives between DATA START and DATA END. The engine below is generic.
+// Field reference: references/data-model.md in the learn-repo:flow-diagram skill.
+
+const PAGE = {
+	eyebrow: "Product · Area · Subsystem",
+	title: "What happens when the user does X",
+	intro: "Two or three sentences: where the action starts, which layers it crosses, where it ends, and what the reader can do on this page (click a box for details and references).",
+	// HTML allowed. Say what the diagram was built from, the date, the branch or version, and what the evidence marks mean.
+	sourceNote: "Built from <a href=\"research.md\">research.md</a>, checked against the code on YYYY-MM-DD. Paths: <code>S/</code> = <code>src/server/</code>. Evidence marks per step: <b>[✓]</b> read in code and re-checked, <b>[code]</b> traced in code, <b>[docs]</b> from documents only, <b>[inferred]</b> reasoned, not run.",
+	legend: {
+		main: "step in the main flow",
+		side: "side effect: call, message or stored data",
+		branch: "branch: stop, skip or fallback",
+		loop: "a step that goes back"
+	}
+};
+
+// One lane per layer of the system, ordered by distance from the user (left = what the user touches). 4 to 8 lanes.
+// color: a saturated hue that stays readable as white-on-color; tint: a very light wash of the same hue for the lane background.
+const LANES = [
+	{ id: "ui", name: "User interface", sub: "screen · component", color: "#1d4ed8", tint: "#e8efff" },
+	{ id: "transport", name: "Transport", sub: "IPC · WebSocket · HTTP", color: "#7c3aed", tint: "#f1eaff" },
+	{ id: "server", name: "Server handler", sub: "endpoint · validation", color: "#d9480f", tint: "#fff0e8" },
+	{ id: "logic", name: "Core logic", sub: "the module that does the work", color: "#047857", tint: "#e3f7ef" },
+	{ id: "external", name: "External service", sub: "third-party API", color: "#dc2626", tint: "#ffe9e9" },
+	{ id: "store", name: "Data & logs", sub: "database · files", color: "#0e7490", tint: "#e2f6fb" }
+];
+
+// Small badges shown in a step's title bar. Use them for "who decides": an LLM, a human, a scheduler, a vendor.
+const TAGS = {
+	LLM: { label: "LLM", color: "#dc2626", bg: "#ffe9e9", legend: "the model interprets or decides" },
+	HUMAN: { label: "YOU", color: "#1d4ed8", bg: "#e8efff", legend: "the user decides" }
+};
+
+// One step = one thing a reader can observe or point at in the code. 12 to 30 steps, numbered in the order they happen.
+// Fields: n, lane, title (≤ 40 chars), box (≤ 90 chars: the concrete what), detail (2–5 sentences), refs (files, functions, lines),
+// ev ("✓" | "code" | "docs" | "inferred"), tag (key of TAGS), branch (≤ 140 chars: stop/skip/fallback cases, "cause → effect; cause → effect"),
+// via (label on the arrow to the next step: the message or call that carries it), also ([{ lane, text, dir: "to" | "from" | "both" }]: side effects),
+// loopTo (step number this step jumps back to), loopLabel (text along the loop arrow).
+const STEPS = [
+	{ n: 1, lane: "ui", title: "You press the button", box: "selected rows → request payload", ev: "✓",
+		detail: "What the user sees and does, what the client collects, and what it deliberately leaves out.",
+		refs: [ "C/Screen.jsx handleClick", "C/Screen.jsx:120-140" ] },
+	{ n: 2, lane: "transport", title: "Request leaves the client", box: "example.request over WebSocket", ev: "code",
+		detail: "Which channel carries it and what limits apply on the way (timeouts, single-flight, retries).",
+		branch: "not connected → error shown; no answer in 60 s → timeout",
+		via: "example.request",
+		refs: [ "C/transport.ts send" ] },
+	{ n: 3, lane: "server", title: "Handler receives it", box: "auth check · schema check", ev: "✓",
+		detail: "What the server verifies before doing work, and what it does not verify.",
+		branch: "no user → dropped silently; bad payload → example.error",
+		refs: [ "S/handlers.ts:41" ] },
+	{ n: 4, lane: "logic", title: "The work happens", tag: "LLM", box: "input → decision, with one external call", ev: "code",
+		detail: "The core step. Say what goes in, what comes out, and which part is deterministic.",
+		branch: "external call fails → fallback value; confidence below floor → empty result",
+		also: [ { lane: "external", text: "one API call", dir: "to" }, { lane: "store", text: "trace file (if logging is on)", dir: "to" } ],
+		refs: [ "S/logic.ts run" ] },
+	{ n: 5, lane: "server", title: "Result and record", box: "exactly one result message; one usage row", ev: "✓",
+		detail: "What is sent back, in which shape, and what is written down about the run.",
+		via: "example.result",
+		also: [ { lane: "store", text: "usage row (metered, not billed)", dir: "to" } ],
+		refs: [ "S/handlers.ts:90-118" ] },
+	{ n: 6, lane: "ui", title: "You review and confirm", tag: "HUMAN", box: "list with checkboxes; nothing applied yet", ev: "docs",
+		detail: "What the user can change before anything takes effect, and what the screen does not show.",
+		branch: "error → message + Retry; partial failure → shown without warning",
+		loopTo: 2, loopLabel: "retry · same payload, new option",
+		refs: [ "C/ReviewDialog.jsx" ] },
+	{ n: 7, lane: "ui", title: "Confirm applies the change", box: "one commit; undo in one step", ev: "code",
+		detail: "Where the change finally lands and through which normal path.",
+		also: [ { lane: "store", text: "main record updated", dir: "to" } ],
+		refs: [ "C/apply.js", "ARCHITECTURE.md §x.y" ] }
+];
+
+// Scenarios fade the steps that are not on a given path. "All steps" first. 3 to 6 scenarios: the happy path variants,
+// the degraded paths (a dependency down, a stop condition), and any other caller that reuses the same core.
+const ALL = STEPS.map(step => step.n);
+const without = (list, drop) => list.filter(n => !drop.includes(n));
+const SCENARIOS = [
+	{ id: "all", label: "All steps", steps: ALL },
+	{
+		id: "degraded", label: "External service down",
+		summary: "One paragraph: what is different on this path, what the user ends up seeing, and what it costs.",
+		steps: without(ALL, [ 4 ]),
+		notes: { 3: "logs a warning and continues", 5: "result is empty, error flag unset" }
+	},
+	{
+		id: "retry", label: "User retries",
+		summary: "The user changes an option in the review dialog and the request runs again from step 2.",
+		steps: without(ALL, [ 1 ]),
+		notes: { 6: "the starting point of this scenario" }
+	}
+];
+// ===== DATA END =====
+
+// ===== ENGINE (generic, no need to edit) =====
+const laneIndex = Object.fromEntries(LANES.map((lane, i) => [ lane.id, i ]));
+const laneById = Object.fromEntries(LANES.map(lane => [ lane.id, lane ]));
+const color = id => laneById[id]?.color ?? getComputedStyle(document.documentElement).getPropertyValue(`--${id}`).trim();
+const tint = id => laneById[id].tint;
+const esc = text => String(text).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[ch]));
+
+document.getElementById("eyebrow").textContent = PAGE.eyebrow;
+document.getElementById("title").textContent = PAGE.title;
+document.title = PAGE.title;
+document.getElementById("intro").textContent = PAGE.intro;
+document.getElementById("sourceNote").innerHTML = PAGE.sourceNote;
+document.getElementById("legend").innerHTML = [
+	`<span class="inline-flex items-center gap-2"><i class="inline-block h-4 w-[26px] rounded border-2" style="border-color:${LANES[Math.min(3, LANES.length - 1)].color};background:${LANES[Math.min(3, LANES.length - 1)].tint}"></i>${esc(PAGE.legend.main)}</span>`,
+	`<span class="inline-flex items-center gap-2"><i class="inline-block h-4 w-[26px] rounded" style="background:${LANES.at(-2)?.color ?? LANES.at(-1).color}"></i>${esc(PAGE.legend.side)}</span>`,
+	`<span class="inline-flex items-center gap-2"><i class="inline-block h-4 w-[26px] rounded border-2 border-dashed border-branch bg-branch-bg"></i>${esc(PAGE.legend.branch)}</span>`,
+	STEPS.some(step => step.loopTo) ? `<span class="inline-flex items-center gap-2"><i class="inline-block h-0 w-[26px] border-t-[3px] border-dashed" style="border-color:${LANES[0].color}"></i>${esc(PAGE.legend.loop)}</span>` : "",
+	...Object.values(TAGS).filter(tag => STEPS.some(step => TAGS[step.tag] === tag)).map(tag => `<span class="inline-flex items-center gap-2"><b class="rounded px-1.5 py-0.5 font-display text-[11px] font-bold" style="color:${tag.color};background:${tag.bg}">${esc(tag.label)}</b>${esc(tag.legend)}</span>`)
+].join("");
+
+let scenario = SCENARIOS[0];
+let focusLane = null;
+let selected = null;
+
+const svg = document.getElementById("map");
+const laneheadSvg = document.getElementById("lanehead");
+const laneheadWrap = document.getElementById("laneheadWrap");
+const mapWrap = document.getElementById("mapWrap");
+mapWrap.addEventListener("scroll", () => { laneheadWrap.scrollLeft = mapWrap.scrollLeft; }, { passive: true });
+svg.setAttribute("aria-label", `Swimlane diagram of the ${STEPS.length} steps across ${LANES.length} layers: ${LANES.map(lane => lane.name).join(", ")}.`);
+const LW = 214, BOX_W = 192, HEAD_H = 64, TOP = 26, ROW_GAP = 34, SIDE_W = 166, LOOP_GAP = 16;
+const LOOPS = STEPS.filter(step => step.loopTo !== undefined).map(step => step.n);
+const PAD_L = 44 + LOOP_GAP * Math.max(0, LOOPS.length - 1);
+const measureCtx = document.createElement("canvas").getContext("2d");
+
+function wrapText(text, font, maxWidth) {
+	measureCtx.font = font;
+	const lines = [];
+	let line = "";
+	const words = text.split(/\s+/).flatMap(word => {
+		if (measureCtx.measureText(word).width <= maxWidth)
+			return [ word ];
+		const parts = [];
+		let part = "";
+		for (const ch of word) {
+			if (measureCtx.measureText(part + ch).width > maxWidth && part) {
+				parts.push(part);
+				part = ch;
+			} else
+				part += ch;
+		}
+		return part ? [ ...parts, part ] : parts;
+	});
+	for (const word of words) {
+		const next = line ? `${line} ${word}` : word;
+		if (measureCtx.measureText(next).width > maxWidth && line) {
+			lines.push(line);
+			line = word;
+		} else
+			line = next;
+	}
+	if (line)
+		lines.push(line);
+	return lines;
+}
+const laneX = id => PAD_L + laneIndex[id] * LW;
+const F_TITLE = "700 13px 'IBM Plex Sans', sans-serif";
+const F_BOX = "400 11.5px 'IBM Plex Sans', sans-serif";
+const F_SIDE = "600 11px 'IBM Plex Sans', sans-serif";
+const F_BRANCH = "500 11px 'IBM Plex Sans', sans-serif";
+const F_TAG = "700 10.5px Archivo, sans-serif";
+function tagWidth(tag) {
+	measureCtx.font = F_TAG;
+	return Math.max(32, measureCtx.measureText(tag.label).width + 12);
+}
+
+function layout() {
+	let y = TOP;
+	return STEPS.map(step => {
+		const tagW = TAGS[step.tag] ? tagWidth(TAGS[step.tag]) + 10 : 0;
+		const titleLines = wrapText(step.title, F_TITLE, BOX_W - 46 - tagW);
+		const boxLines = wrapText(step.box, F_BOX, BOX_W - 20);
+		const branchLines = step.branch ? wrapText(step.branch, F_BRANCH, BOX_W - 20) : [];
+		const mainH = 12 + titleLines.length * 16 + 4 + boxLines.length * 14 + 10;
+		const branchH = branchLines.length ? branchLines.length * 13 + 10 : 0;
+		const h = mainH + branchH;
+		let stack = 0;
+		const sides = (step.also ?? []).map(side => {
+			const lines = wrapText(side.text, F_SIDE, SIDE_W - 16);
+			const placed = { ...side, lines, h: lines.length * 14 + 12, dy: stack };
+			stack += placed.h + 8;
+			return placed;
+		});
+		const rowH = Math.max(h, stack ? stack - 8 + 4 : 0);
+		const x = laneX(step.lane) + (LW - BOX_W) / 2;
+		const placed = { step, x, y, w: BOX_W, h, mainH, titleLines, boxLines, branchLines, sides };
+		y += rowH + ROW_GAP;
+		return placed;
+	});
+}
+
+function render() {
+	const rows = layout();
+	const width = PAD_L + LANES.length * LW + 16;
+	const height = rows.at(-1).y + rows.at(-1).h + 40;
+	const inPath = new Set(scenario.steps);
+	svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+	const out = [];
+	out.push(`<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${color("arrow")}"/></marker>
+		${LANES.map(lane => `<marker id="arr-${lane.id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${lane.color}"/></marker>`).join("")}</defs>`);
+
+	const head = [];
+	laneheadSvg.setAttribute("viewBox", `0 0 ${width} ${HEAD_H}`);
+	LANES.forEach((lane, i) => {
+		const x = PAD_L + i * LW;
+		const dim = focusLane && focusLane !== lane.id ? " class=\"lane-dim\"" : "";
+		out.push(`<rect${dim} x="${x + 2}" y="0" width="${LW - 4}" height="${height}" fill="${lane.tint}" opacity="0.55"/>`);
+		head.push(`<g${dim}><rect x="${x + 2}" y="0" width="${LW - 4}" height="${HEAD_H}" fill="${lane.tint}" opacity="0.55"/>
+			<rect x="${x + 4}" y="6" width="${LW - 8}" height="${HEAD_H - 10}" rx="8" fill="${lane.color}"/>
+			${subLines(lane)}</g>`);
+	});
+	laneheadSvg.innerHTML = head.join("");
+
+	const dimStep = step => (!inPath.has(step.n) || (focusLane && focusLane !== step.lane));
+	function subLines(lane) {
+		const x = PAD_L + laneIndex[lane.id] * LW + LW / 2;
+		const lines = wrapText(lane.sub, "400 10.5px 'IBM Plex Sans', sans-serif", LW - 20).slice(0, 2);
+		const name = `<text x="${x}" y="${lines.length > 1 ? 27 : 31}" text-anchor="middle" fill="#fff" font-family="Archivo, sans-serif" font-weight="800" font-size="15">${esc(lane.name)}</text>`;
+		if (lines.length < 2)
+			return `${name}<text x="${x}" y="49" text-anchor="middle" fill="#fff" font-size="11" opacity="0.92">${esc(lines[0] ?? "")}</text>`;
+		return `${name}<text x="${x}" y="42" text-anchor="middle" fill="#fff" font-size="10.5" opacity="0.92">${esc(lines[0])}</text><text x="${x}" y="55" text-anchor="middle" fill="#fff" font-size="10.5" opacity="0.92">${esc(lines[1])}</text>`;
+	}
+
+	for (let i = 0; i < rows.length - 1; i++) {
+		const a = rows[i], b = rows[i + 1];
+		const x1 = a.x + a.w / 2, y1 = a.y + a.h, x2 = b.x + b.w / 2, y2 = b.y;
+		const midY = y1 + (y2 - y1) / 2;
+		const d = x1 === x2 ? `M${x1} ${y1} V${y2 - 1}` : `M${x1} ${y1} V${midY} H${x2} V${y2 - 1}`;
+		const faded = dimStep(a.step) || dimStep(b.step) ? " class=\"dim\"" : "";
+		out.push(`<g${faded}><path d="${d}" fill="none" stroke="${color("arrow")}" stroke-width="2" marker-end="url(#arr)"/>`);
+		if (a.step.via) {
+			measureCtx.font = "600 11px 'IBM Plex Mono', monospace";
+			const tw = measureCtx.measureText(a.step.via).width;
+			const lx = x1 === x2 ? x1 + 8 : (x1 + x2) / 2 - tw / 2;
+			out.push(`<rect x="${lx - 4}" y="${midY - 9}" width="${tw + 8}" height="17" rx="4" fill="#fff" stroke="${color("arrow")}" stroke-width="1"/>
+				<text x="${lx}" y="${midY + 3.5}" font-family="'IBM Plex Mono', monospace" font-weight="600" font-size="11" fill="${color("arrow")}">${esc(a.step.via)}</text>`);
+		}
+		out.push("</g>");
+	}
+
+	for (const row of rows) {
+		if (!row.step.loopTo)
+			continue;
+		const target = rows.find(r => r.step.n === row.step.loopTo);
+		if (!target)
+			continue;
+		const c = color(row.step.lane);
+		const xl = Math.min(row.x, target.x) - 13 - LOOP_GAP * LOOPS.indexOf(row.step.n);
+		const yFrom = row.y + 22, yTo = target.y + 22;
+		const faded = dimStep(row.step) ? " class=\"dim\"" : "";
+		out.push(`<g${faded}><path d="M${row.x} ${yFrom} H${xl} V${yTo} H${target.x - 1}" fill="none" stroke="${c}" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#arr-${row.step.lane})"/>
+			<text transform="translate(${xl - 7} ${(yFrom + yTo) / 2}) rotate(-90)" text-anchor="middle" font-size="11.5" font-weight="700" fill="${c}">${esc(row.step.loopLabel ?? "back")}</text></g>`);
+	}
+
+	for (const row of rows) {
+		const faded = dimStep(row.step);
+		for (const side of row.sides) {
+			const sx = laneX(side.lane) + (LW - SIDE_W) / 2;
+			const sy = row.y + 4 + side.dy;
+			const toRight = laneIndex[side.lane] > laneIndex[row.step.lane];
+			const fromX = toRight ? row.x + row.w : row.x;
+			const toX = toRight ? sx : sx + SIDE_W;
+			const ly = sy + 14;
+			const yAttach = Math.min(ly, row.y + row.h - 12);
+			const ex = fromX + (toRight ? 12 : -12);
+			const x0 = fromX + (toRight ? 1 : -1), x1 = toX + (toRight ? -1 : 1);
+			const d = yAttach === ly ? `M${x0} ${ly} H${x1}` : `M${x0} ${yAttach} H${ex} V${ly} H${x1}`;
+			const markEnd = side.dir === "to" || side.dir === "both" ? ` marker-end="url(#arr-${side.lane})"` : "";
+			const markStart = side.dir === "from" || side.dir === "both" ? ` marker-start="url(#arr-${side.lane})"` : "";
+			const sideDim = faded || (focusLane && focusLane !== side.lane && focusLane !== row.step.lane);
+			out.push(`<g${sideDim ? " class=\"dim\"" : ""}><path d="${d}" fill="none" stroke="${color(side.lane)}" stroke-width="2" stroke-dasharray="5 3"${markEnd}${markStart}/>
+				<rect x="${sx}" y="${sy}" width="${SIDE_W}" height="${side.h}" rx="6" fill="${color(side.lane)}"/>
+				${side.lines.map((line, k) => `<text x="${sx + SIDE_W / 2}" y="${sy + 17 + k * 14}" text-anchor="middle" font-size="11" font-weight="600" fill="#fff">${esc(line)}</text>`).join("")}</g>`);
+		}
+	}
+
+	for (const row of rows) {
+		const { step, x, y, w, h, mainH, titleLines, boxLines, branchLines } = row;
+		const c = color(step.lane);
+		const cls = [ "step", dimStep(step) ? "dim" : "", selected === step.n ? "sel" : "" ].filter(Boolean).join(" ");
+		const parts = [];
+		parts.push(`<rect class="frame" x="${x}" y="${y}" width="${w}" height="${h}" rx="8" fill="#fff" stroke="${c}" stroke-width="2.5"/>`);
+		parts.push(`<rect x="${x + 1.25}" y="${y + 1.25}" width="${w - 2.5}" height="${mainH - 1.25}" rx="7" fill="${tint(step.lane)}"/>`);
+		parts.push(`<circle cx="${x + 18}" cy="${y + 19}" r="12" fill="${c}"/><text x="${x + 18}" y="${y + 23.5}" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="800" font-size="12.5" fill="#fff">${step.n}</text>`);
+		const tag = TAGS[step.tag];
+		if (tag) {
+			const tw = tagWidth(tag);
+			parts.push(`<rect x="${x + w - tw - 8}" y="${y + 8}" width="${tw}" height="18" rx="4" fill="${tag.color}"/><text x="${x + w - 8 - tw / 2}" y="${y + 21}" text-anchor="middle" font-family="Archivo, sans-serif" font-weight="700" font-size="10.5" fill="#fff">${esc(tag.label)}</text>`);
+		}
+		titleLines.forEach((line, k) => parts.push(`<text x="${x + 36}" y="${y + 24 + k * 16}" font-size="13" font-weight="700" fill="${color("ink")}">${esc(line)}</text>`));
+		const by = y + 12 + titleLines.length * 16 + 4;
+		boxLines.forEach((line, k) => parts.push(`<text x="${x + 10}" y="${by + 12 + k * 14}" font-size="11.5" fill="${color("ink-soft")}">${esc(line)}</text>`));
+		if (branchLines.length) {
+			parts.push(`<rect x="${x + 1.25}" y="${y + mainH}" width="${w - 2.5}" height="${h - mainH - 1.25}" fill="${color("branch-bg")}"/>
+				<line x1="${x + 1}" y1="${y + mainH}" x2="${x + w - 1}" y2="${y + mainH}" stroke="${color("branch")}" stroke-width="1.5" stroke-dasharray="4 3"/>`);
+			branchLines.forEach((line, k) => parts.push(`<text x="${x + 10}" y="${y + mainH + 15 + k * 13}" font-size="11" font-weight="500" fill="${color("branch")}">${esc(line)}</text>`));
+		}
+		out.push(`<g class="${cls}" data-n="${step.n}" tabindex="0" role="button" aria-label="Step ${step.n}: ${esc(step.title)}">${parts.join("")}</g>`);
+	}
+	svg.innerHTML = out.join("");
+}
+
+const refsHtml = refs => `<div class="flex flex-wrap gap-1.5">${(refs ?? []).map(ref => `<code class="rounded border border-line bg-[#f0f1f8] px-1.5 py-0.5 font-mono text-[12px] [overflow-wrap:anywhere]">${esc(ref)}</code>`).join("")}</div>`;
+const evHtml = ev => ev ? `<span class="font-semibold text-ink-soft">[${esc(ev)}]</span>` : "";
+const laneName = id => laneById[id].name;
+const badge = (step, c) => `<span class="inline-flex h-[30px] min-w-[30px] flex-none items-center justify-center rounded-full px-2 font-display text-sm font-extrabold text-white" style="background:${c}">${step.n}</span>`;
+const tagHtml = step => TAGS[step.tag] ? `<span class="rounded px-1.5 py-0.5 font-display text-[11px] font-bold" style="color:${TAGS[step.tag].color};background:${TAGS[step.tag].bg}">${esc(TAGS[step.tag].label)}</span>` : "";
+const branchHtml = step => step.branch ? `<p class="rounded border-l-[3px] border-branch bg-branch-bg px-2.5 py-1.5 text-sm">Branch: ${esc(step.branch)}</p>` : "";
+const noteHtml = n => scenario.notes?.[n] ? `<p class="rounded border-l-[3px] border-[#e0a800] bg-[#fffbea] px-2.5 py-1.5 text-sm">${esc(scenario.label)}: ${esc(scenario.notes[n])}</p>` : "";
+
+function renderList() {
+	document.getElementById("list").innerHTML = STEPS.map(step => {
+		const off = !scenario.steps.includes(step.n);
+		const c = color(step.lane);
+		return `<li id="step-${step.n}" data-n="${step.n}" style="--c:${c}" class="grid cursor-pointer grid-cols-[38px_1fr] gap-x-3 gap-y-1 rounded-xl border border-line bg-white px-3.5 py-3 scroll-mt-5 ${selected === step.n ? "sel" : ""}${off ? " dim" : ""}">
+			${badge(step, c)}
+			<div class="grid min-w-0 gap-1.5">
+				<div class="flex flex-wrap items-baseline gap-x-2.5 gap-y-1"><b class="font-display text-base">${esc(step.title)}</b>${tagHtml(step)}<span class="text-[11px] font-semibold uppercase tracking-[0.1em]" style="color:${c}">${esc(laneName(step.lane))}</span>${evHtml(step.ev)}</div>
+				<p>${esc(step.detail)}</p>
+				${branchHtml(step)}${noteHtml(step.n)}${refsHtml(step.refs)}
+			</div></li>`;
+	}).join("");
+}
+
+const detail = document.getElementById("detail");
+function showDetail(n) {
+	const step = STEPS.find(s => s.n === n);
+	if (!step) {
+		detail.hidden = true;
+		return;
+	}
+	const c = color(step.lane);
+	detail.style.setProperty("--c", c);
+	detail.innerHTML = `<div class="flex items-center gap-2.5">${badge(step, c)}<div><div class="text-[11px] font-semibold uppercase tracking-[0.1em]" style="color:${c}">${esc(laneName(step.lane))} ${evHtml(step.ev)}</div><h3 class="font-display text-base font-bold">${esc(step.title)} ${tagHtml(step)}</h3></div><button class="ml-auto cursor-pointer border-0 bg-transparent px-2 py-1 text-[22px] font-semibold leading-none text-ink-soft" id="closeDetail" aria-label="Close details">×</button></div>
+		<p>${esc(step.detail)}</p>
+		${branchHtml(step)}${noteHtml(n)}
+		${(step.also ?? []).length ? `<p class="text-[13px] text-ink-soft">Touches: ${step.also.map(side => `${esc(laneName(side.lane))} (${esc(side.text)})`).join("; ")}</p>` : ""}
+		${refsHtml(step.refs)}`;
+	detail.hidden = false;
+	document.getElementById("closeDetail").onclick = () => select(null);
+}
+
+function select(n) {
+	selected = n;
+	render();
+	renderList();
+	showDetail(n);
+}
+
+svg.addEventListener("click", event => {
+	const g = event.target.closest(".step");
+	if (g)
+		select(Number(g.dataset.n));
+});
+svg.addEventListener("keydown", event => {
+	const g = event.target.closest?.(".step");
+	if (g && (event.key === "Enter" || event.key === " ")) {
+		event.preventDefault();
+		select(Number(g.dataset.n));
+	}
+});
+document.getElementById("list").addEventListener("click", event => {
+	const li = event.target.closest("li");
+	if (!li)
+		return;
+	select(Number(li.dataset.n));
+	svg.querySelector(`.step[data-n="${li.dataset.n}"]`)?.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+});
+document.addEventListener("keydown", event => {
+	if (event.key === "Escape")
+		select(null);
+});
+
+const CHIP = "chip inline-flex cursor-pointer items-center gap-2 rounded-full border-2 bg-white px-3 py-2 text-[13px] font-medium leading-none [border-color:var(--c)] [color:var(--c)] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-amber-500";
+const scenRow = document.getElementById("scenarios");
+const scenNote = document.getElementById("scenarioNote");
+for (const s of SCENARIOS) {
+	const button = document.createElement("button");
+	button.className = CHIP;
+	button.type = "button";
+	button.id = `scen-${s.id}`;
+	button.style.setProperty("--c", "#14142b");
+	button.textContent = s.label;
+	button.setAttribute("aria-pressed", String(s === scenario));
+	button.onclick = () => {
+		scenario = s;
+		scenRow.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b === button)));
+		scenNote.hidden = !s.summary;
+		scenNote.textContent = s.summary ?? "";
+		select(selected);
+	};
+	scenRow.append(button);
+}
+const laneRow = document.getElementById("lanes");
+for (const lane of LANES) {
+	const button = document.createElement("button");
+	button.className = CHIP;
+	button.type = "button";
+	button.id = `lane-${lane.id}`;
+	button.style.setProperty("--c", lane.color);
+	button.innerHTML = `<span class="dot h-2.5 w-2.5 rounded-full" style="background:${lane.color}"></span>${esc(lane.name)}`;
+	button.setAttribute("aria-pressed", "false");
+	button.onclick = () => {
+		focusLane = focusLane === lane.id ? null : lane.id;
+		laneRow.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.id === `lane-${focusLane}`)));
+		render();
+	};
+	laneRow.append(button);
+}
+
+render();
+renderList();
+(document.fonts?.ready ?? Promise.resolve()).then(() => render());
+</script>
+</body>
+</html>

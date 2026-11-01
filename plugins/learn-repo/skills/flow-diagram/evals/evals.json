@@ -1,0 +1,92 @@
+{
+  "skill_name": "learn-repo:flow-diagram",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "fictional-expense-approval-from-notes",
+      "prompt": "I researched how an expense claim moves through our Ledgerly system and wrote it up in expense-approval-research.md (attached). Turn it into an interactive HTML flow diagram: swimlanes per layer, numbered steps, the failure branches, what talks to the bank and HR, and filters for the main paths (happy path, policy block, bank rejection, the web portal and card-import callers). Light theme, Tailwind, vibrant colours. Save it next to the notes as expense-approval-flow.html.",
+      "expected_output": "One HTML file with 5–8 lanes (mobile app, claims service, policy engine, routing/HR, approver, payments/bank, audit/ledger), 14–22 ordered steps each with a short box text, failure branches drawn as strips (duplicate, policy block, HR down, bank rejected/returned, 7-day escalation), side boxes for HR, bank and audit, 4–6 scenarios including the two other callers, a detail panel with the file refs and the [✓]/[code]/[docs] marks from the notes, reference cards (messages/events, what is stored), and a step list. No invented numbers beyond the notes.",
+      "files": [
+        "files/expense-approval-research.md"
+      ],
+      "assertions": [
+        "The HTML file exists at the requested name, its inline scripts parse (node --check on the extracted script), and loading it in a browser produces no console errors other than CDN notices or a favicon 404",
+        "The page uses Tailwind CSS (CDN script or Tailwind utility classes) with a light background and saturated, distinct lane colours",
+        "The map is a vertical swimlane: one column per layer with a visible header at the top, steps placed in their layer's column, and arrows following step order from top to bottom",
+        "At a 1200 px wide viewport nothing is clipped: every lane and every step is visible by scrolling the page, not hidden inside an inner scroll box or cut at the right edge",
+        "No arrow, loop line or edge label runs across the text of a step box or a side box",
+        "Steps are numbered in flow order and each step is clickable (or listed) with its detail text and the file or document references from the source",
+        "Failure, skip and fallback cases are attached to the step where they happen (a visible strip, badge or note on the step), not only in prose elsewhere",
+        "Scenario filters exist for the paths the prompt asked for, and selecting one visibly fades or hides the steps not on that path",
+        "A layer filter or legend lets the reader focus one column and explains the visual marks used",
+        "Evidence marks from the source ([✓], [code], [docs] or equivalent) are carried onto the steps, not dropped",
+        "Every numeric limit, threshold or count on the page, including counts written as words and numbers in scenario summaries, notes and cards, appears in the source document or on a step marked as re-read in code with a ref; nothing numeric is invented",
+        "Reference material beyond the map is present: at least one table (messages, calls or stored data) and a numbered list of all steps",
+        "Layers cover the research's parties: mobile app, claims service, policy engine, routing/HR, approver, payments/bank, audit/ledger (at least 5 distinct lanes, with HR and bank reachable as side effects or lanes)",
+        "At least 14 steps, including upload-then-POST, duplicate detection, synchronous policy engine, routing with the 15-minute HR cache, approver escalation after 7 days, the claims.approved event, the 16:00 batch, the bank webhook outcomes and the audit row",
+        "Branches present for at least four of: duplicate claim (flagged-duplicate), policy block (rejected-policy), HR down with cold cache (stays submitted, retry every 5 minutes), bank rejected or returned (payment-failed, ledger reversal), no approver action for 7 days (escalation)",
+        "Scenarios include the five requested: happy path, policy block, bank rejection, web portal caller (no OCR), card-import caller (skips duplicate detection, lands as draft)",
+        "The page carries the research's path refs (A/claims/NewClaim.tsx, B/http/createClaim.ts, B/policy/engine.ts, B/routing/route.ts, P/batch/run.ts, P/bank/webhook.ts, B/audit/write.ts) on the matching steps",
+        "Scenario summaries and notes state only what the source says, or label a sentence as an assumption when the source is silent"
+      ]
+    },
+    {
+      "id": 2,
+      "eval_name": "ai-assistant-question-from-gigachat-doc",
+      "prompt": "Using docs/ai/gigachat.md sections 3.1, 3.5, 4.3 and 4.5 (ask a question; session, cancel, balance; agent pipeline; billing), build an HTML swimlane diagram of what happens when a user asks the AI assistant a question in the Project window: from the chat panel through the port bridge and Entrance WebSocket to the server handler, the agent pipeline, the tools, GigaChat and billing, and back. Include the billing admission and deduction, the rate limits, the RAG step and the tool loop, with scenarios for a dashboard-mode question, an out-of-balance user, and a question that forces the dependency tool. Put it at docs/ai/ai-assistant-question-flow.html.",
+      "expected_output": "One HTML file with the seven-layer swimlane (UI, transport, server handler, agent pipeline, tools, GigaChat, data), 20–35 steps traced to the doc's file refs, the tool loop drawn as a loop, branch strips for balance 0, bad payload, project not synced, rate limit and cancel, side boxes for billing collections and the usage log, 4 scenarios, evidence marks consistent with the doc's own [✓]/[code] marks, and reference cards for the ai-agent.* messages and the GigaChat calls per turn.",
+      "files": [],
+      "assertions": [
+        "The HTML file exists at the requested name, its inline scripts parse (node --check on the extracted script), and loading it in a browser produces no console errors other than CDN notices or a favicon 404",
+        "The page uses Tailwind CSS (CDN script or Tailwind utility classes) with a light background and saturated, distinct lane colours",
+        "The map is a vertical swimlane: one column per layer with a visible header at the top, steps placed in their layer's column, and arrows following step order from top to bottom",
+        "At a 1200 px wide viewport nothing is clipped: every lane and every step is visible by scrolling the page, not hidden inside an inner scroll box or cut at the right edge",
+        "No arrow, loop line or edge label runs across the text of a step box or a side box",
+        "Steps are numbered in flow order and each step is clickable (or listed) with its detail text and the file or document references from the source",
+        "Failure, skip and fallback cases are attached to the step where they happen (a visible strip, badge or note on the step), not only in prose elsewhere",
+        "Scenario filters exist for the paths the prompt asked for, and selecting one visibly fades or hides the steps not on that path",
+        "A layer filter or legend lets the reader focus one column and explains the visual marks used",
+        "Evidence marks from the source ([✓], [code], [docs] or equivalent) are carried onto the steps, not dropped",
+        "Every numeric limit, threshold or count on the page, including counts written as words and numbers in scenario summaries, notes and cards, appears in the source document or on a step marked as re-read in code with a ref; nothing numeric is invented",
+        "Reference material beyond the map is present: at least one table (messages, calls or stored data) and a numbered list of all steps",
+        "Lanes follow the document's layers: desktop UI, desktop transport (port bridge and Entrance WebSocket), server handler, agent pipeline, tools, GigaChat API, data and billing",
+        "The handler's steps appear in the document's order: logged-in user, zod validation, project resolution (ephemeral copy from snapshot), read ACL check, billing admission (org balance then user balance), rate and concurrency limits, metering and session header",
+        "The agent pipeline shows the intent detectors, the classifier and RAG step, tool filtering, the prompt, the tool loop (at most 8 rounds and 12 calls) drawn as a loop that goes back, the output guard and the history",
+        "Branches present for: org or user balance at 0, bad payload, project not synced in project mode, rate or concurrency limit hit, cancel racing the HTTP call",
+        "Scenarios include: all steps, a dashboard-mode question, an out-of-balance user, a question that forces suggest_dependencies through the intent regex",
+        "Billing deduction in a finally block and the aiTokenUsageLog row are shown as side effects or steps with the collections named (aiOrgBalance, aiTokenAccounts, aiTokenLedger, aiTokenUsageLog)",
+        "A reference card lists the ai-agent.* messages (ask, progress, token, tool-result, done, error, cancel, new-session, balance.get) and one lists the GigaChat calls per turn",
+        "Scenario summaries and notes state only what the source says, or label a sentence as an assumption when the source is silent"
+      ]
+    },
+    {
+      "id": 3,
+      "eval_name": "business-flow-only-import-suggestions",
+      "prompt": "Visualize docs/ai/llm-suggest-dependency-business-flow.md as an interactive swimlane flow map (HTML, Tailwind, light, vibrant). That document is written for planners, so keep the business wording in the boxes, mark the steps where the model decides, and show the 'rules first, model fills the gaps' order clearly. Add scenarios for 'rules cover everything', 'model unavailable' and 'planner changes the project type'. Write to docs/ai/import-suggestions-business-flow.html and link it from the markdown.",
+      "expected_output": "One HTML file whose steps follow the document's 13 numbered steps (split where a step crosses layers), with LLM tags on steps 2, 4, 6, 9 and 11, branch strips drawn from the document's bullets (confidence floor, unknown type, model call fails, partial failures silent), the limits list carried into a closing section, the 'what changed' table not included, scenarios as requested, evidence marks [docs] where only the document supports a claim, and a link added to the markdown's header or a related-documents line.",
+      "files": [],
+      "assertions": [
+        "The HTML file exists at the requested name, its inline scripts parse (node --check on the extracted script), and loading it in a browser produces no console errors other than CDN notices or a favicon 404",
+        "The page uses Tailwind CSS (CDN script or Tailwind utility classes) with a light background and saturated, distinct lane colours",
+        "The map is a vertical swimlane: one column per layer with a visible header at the top, steps placed in their layer's column, and arrows following step order from top to bottom",
+        "At a 1200 px wide viewport nothing is clipped: every lane and every step is visible by scrolling the page, not hidden inside an inner scroll box or cut at the right edge",
+        "No arrow, loop line or edge label runs across the text of a step box or a side box",
+        "Steps are numbered in flow order and each step is clickable (or listed) with its detail text and the file or document references from the source",
+        "Failure, skip and fallback cases are attached to the step where they happen (a visible strip, badge or note on the step), not only in prose elsewhere",
+        "Scenario filters exist for the paths the prompt asked for, and selecting one visibly fades or hides the steps not on that path",
+        "A layer filter or legend lets the reader focus one column and explains the visual marks used",
+        "Evidence marks from the source ([✓], [code], [docs] or equivalent) are carried onto the steps, not dropped",
+        "Every numeric limit, threshold or count on the page, including counts written as words and numbers in scenario summaries, notes and cards, appears in the source document or on a step marked as re-read in code with a ref; nothing numeric is invented",
+        "Reference material beyond the map is present: at least one table (messages, calls or stored data) and a numbered list of all steps",
+        "Steps follow the document's 13 numbered steps in order, split only where one step crosses layers, with the business wording kept in boxes (planner, work, headings, links), not code identifiers",
+        "The steps where the model decides (document steps 2, 4, 6, 9, 11) carry a visible LLM mark, and the rule steps (5, 7, 8, 10) are visibly deterministic, so the 'rules first, model fills gaps' order can be read from the map",
+        "Branches come from the document's bullets: confidence below 0.3 stops, unknown type counts as 0.1, model call failure continues as residential building (mkd) with 0.5, rerun skips type detection, partial failures give no warning, low-confidence warning below 0.5",
+        "Scenarios: all steps, rules cover everything, model unavailable, planner changes the project type; the type-change scenario shows a loop back to the request step",
+        "The 'Limits worth knowing' bullets are carried into a closing section; the 'What changed from the earlier description' table is not reproduced on the page",
+        "Evidence marks are [docs] (or equivalent) throughout, since the document is the only source, and the page says what it was built from",
+        "The modified copy of llm-suggest-dependency-business-flow.md contains a link to import-suggestions-business-flow.html near the top or in a related-documents line, and nothing else in it changed",
+        "Scenario summaries and notes state only what the source says, or label a sentence as an assumption when the source is silent"
+      ]
+    }
+  ]
+}
