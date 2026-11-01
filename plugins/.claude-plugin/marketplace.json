@@ -1,0 +1,12 @@
+{
+	"name": "skill-plugins",
+	"owner": { "name": "Akim Khalilov" },
+	"description": "Claude Code skill plugins.",
+	"plugins": [
+		{
+			"name": "learn-repo",
+			"source": "./learn-repo",
+			"description": "Turn findings about a codebase into interactive HTML learning pages: C4 architecture, data flow, data model, module dependencies and process swimlanes."
+		}
+	]
+}

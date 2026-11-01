@@ -13,18 +13,30 @@ Claude Code plugin with five skills that turn findings about a codebase into int
 
 The four page skills share `shared/`: the page template, `page.mjs` (build, check, extract), `screenshot.mjs` (rendered checks in headless Chromium), the data reference, the common build/look/hand-over steps (`workflow.md`) and one worked example per kind. Skills reach it through `${CLAUDE_PLUGIN_ROOT}`. `flow-diagram` keeps its own template and scripts in its skill folder.
 
-This is a copy of the project skills in `../../skills/learn-*`. The two are not synced; edit the one you use.
+## Install
 
-## Use it
+The marketplace file is `../.claude-plugin/marketplace.json` (marketplace `skill-plugins`, next to this folder).
+
+From a local checkout, read in place, so edits need only `/reload-plugins`:
 
 ```bash
-claude --plugin-dir skill-plugins/learn-repo      # loads in place; /reload-plugins after edits
-claude plugin validate skill-plugins/learn-repo
+claude plugin marketplace add <path>/skill-plugins
+claude plugin install learn-repo@skill-plugins
 ```
+
+From a GitHub repository whose root holds the `skill-plugins` content, at the prompt of a terminal session:
+
+```
+/plugin install learn-repo --marketplace <owner>/<repo>
+```
+
+or from a shell: `claude plugin install learn-repo --marketplace <owner>/<repo>`.
+
+For one session without installing: `claude --plugin-dir <path>/skill-plugins/learn-repo`.
 
 ## Test it
 
 ```bash
-node skill-plugins/learn-repo/shared/check.mjs           # rebuild and check the example pages
-node skill-plugins/learn-repo/shared/check.mjs --check   # check only
+node <path>/skill-plugins/learn-repo/shared/check.mjs           # rebuild and check the example pages
+node <path>/skill-plugins/learn-repo/shared/check.mjs --check   # check only
 ```
