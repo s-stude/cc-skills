@@ -1,0 +1,15 @@
+{
+  "name": "context-handoff",
+  "version": "0.1.0",
+  "description": "Hands work off to a fresh Claude Code session through a written brief, and prompts the handoff once context reaches 80%. Relies on the agterm terminal app (agterm.com) to open the new session; without it, prints the steps to start it by hand.",
+  "author": {
+    "name": "Akim Khalilov"
+  },
+  "keywords": [
+    "handoff",
+    "context",
+    "session",
+    "agterm"
+  ],
+  "types": "./types/index.d.ts"
+}

@@ -1,12 +1,19 @@
 {
 	"name": "skill-plugins",
-	"owner": { "name": "Akim Khalilov" },
+	"owner": {
+		"name": "Akim Khalilov"
+	},
 	"description": "Claude Code skill plugins.",
 	"plugins": [
 		{
 			"name": "learn-repo",
 			"source": "./learn-repo",
 			"description": "Turn findings about a codebase into interactive HTML learning pages: C4 architecture, data flow, data model, module dependencies and process swimlanes."
+		},
+		{
+			"name": "context-handoff",
+			"source": "./context-handoff",
+			"description": "Hands work off to a fresh Claude Code session through a written brief, and prompts the handoff once context reaches 80%. Relies on the agterm terminal app (agterm.com) to open the new session; without it, prints the steps to start it by hand."
 		}
 	]
 }
