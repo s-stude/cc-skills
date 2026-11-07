@@ -48,7 +48,7 @@ command for the remaining changed files with the moves left out.
 
 Put `<snapshot-dir>` in the session scratchpad (or the project's `./tmp` if there is
 none), e.g. `<scratchpad>/doc-review/pass-1`. It saves the reviewed content so a later
-re-review can show exactly what changed (section 7).
+re-review can show exactly what changed (section 8).
 
 Also read the project's own documentation rules before judging anything: `CLAUDE.md`,
 `AGENTS.md`, `CONTRIBUTING.md`, a docs index/README, or style guides. A project rule
@@ -111,7 +111,37 @@ Rate by the harm to a reader who trusts the doc, not by the size of the edit:
 
 When unsure between two levels, pick the lower one and state what would raise it.
 
-## 5. Write the report
+## 5. Ask a peer to check the findings
+
+A second reviewer catches findings that rest on a misread of the code, severities that
+are off, and problems you missed. Before writing the final report, look for a way to
+get one. This works the same whether you are Claude, Codex or another agent.
+
+1. **Check which skills are available.** Look at the skills listed in your current
+   session (the available-skills list in your context, or your agent's skills
+   directory). Pick one whose purpose is to consult another agent or model, such as a
+   skill for chatting with a peer agent, asking another model, or running a multi-agent
+   review. Read its description to confirm it fits; don't guess at skill names that
+   aren't listed. If several fit, prefer one that reaches a different model than you
+   (Claude asks Codex, Codex asks Claude), since a different model makes different
+   mistakes.
+2. **If none is available, or the user said not to,** skip this step and note "Peer
+   review: not done (no peer skill available)" in the report. Don't install skills or
+   set up a peer just for this.
+3. **Send the draft findings, not the conclusion you want.** Give the peer the scope,
+   the files and code you checked, and each finding with its location, evidence,
+   severity and proposed change. Ask it to work read-only and to answer, per finding:
+   confirmed, wrong (and why), or severity should change; then to list anything you
+   missed. Follow the chosen skill's own instructions for how to send and wait.
+4. **Weigh the reply; don't adopt it blindly.** For each disputed finding or new one
+   the peer raises, check the doc and code yourself before changing the report. Drop
+   findings the peer showed to be wrong, adjust severities you agree with, and add new
+   findings only after you verified them. Where you and the peer still disagree, keep
+   your finding and add the peer's objection to its **Why** so the user can decide.
+
+On a re-review pass (section 8), send only the new and changed findings.
+
+## 6. Write the report
 
 Present findings first, grouped by severity, most severe first. Use this template:
 
@@ -120,6 +150,7 @@ Present findings first, grouped by severity, most severe first. Use this templat
 
 **Scope:** <files / diff range reviewed> · **Verified against:** <code, config, etc.>
 **Result:** <N> critical · <N> major · <N> minor
+**Peer review:** <skill used> — <N> confirmed · <N> dropped · <N> added (or "not done" and why)
 
 ## Critical
 
@@ -162,7 +193,7 @@ Guidance for good findings:
 
 If there are no findings, say so plainly and still include "Checked and fine".
 
-## 6. Apply only after approval
+## 7. Apply only after approval
 
 End the report by asking which findings to apply (e.g. "all", "critical and major",
 "C1, M2, M3"). Then make exactly those edits, rerun the link checker on the touched
@@ -173,7 +204,7 @@ A finding the user declines ("leave the backlog", "skip m4") is a decision, not 
 open issue. On later passes in the same conversation, list it once under "Declined"
 and don't raise it again as a finding unless the content it concerns has changed.
 
-## 7. Re-review after fixes
+## 8. Re-review after fixes
 
 When the user asks to review the same scope again ("again", "I fixed some", "re-check"),
 review what changed rather than starting over. The first pass already verified the
