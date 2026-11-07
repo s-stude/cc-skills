@@ -4,10 +4,11 @@ Claude Code agent skills I've built or collected across different projects.
 
 ## Install
 
-Each skill has its own `install.sh` that symlinks it into `~/.claude/skills/<name>`:
+Each skill has its own `install.sh` that symlinks it into `~/.claude/skills/<name>`. Skills that also work in Codex have `install-claude.sh` and `install-codex.sh` instead; the Codex one links into `~/.codex/skills/<name>` (or `$CODEX_HOME/skills`):
 
 ```sh
-./_workflow/doc-review/install.sh
+./_workflow/doc-review/install-claude.sh
+./_workflow/doc-review/install-codex.sh
 ```
 
 It can be run from any directory and is safe to re-run. It won't overwrite a real directory at the target path.
