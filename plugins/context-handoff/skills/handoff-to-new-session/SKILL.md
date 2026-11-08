@@ -53,7 +53,8 @@ the brief is written. An old `.handoff/briefNNN.md` folder is left where it is.
 
 Use the template in `references/brief-template.md` and fill every section. What decides its quality:
 
-- **The goal first, in the user's words.** Quote the requests that define the work, verbatim and in order,
+- **The goal first, in the user's words.** Start the section with a `Task:` line of 2-4 words naming
+  the goal; it becomes the new session's name. Quote the requests that define the work, verbatim and in order,
   then say what "done" means. With the goal right, the new session can recover from almost any other gap.
 - **Rules and constraints.** List every standing instruction still in force: what must not change, gates,
   conventions, corrections the user made. Corrections are the easiest to lose and the costliest to repeat.
@@ -90,12 +91,15 @@ start it themselves (then stop with the brief ready and say how to start it). Ch
 complete first: once the session runs, its first message is already sent.
 
 ```bash
-python3 <skill-dir>/scripts/launch.py --brief .handoffs/brief-NNN.md --name <short-kebab-name>
+python3 <skill-dir>/scripts/launch.py --brief .handoffs/brief-NNN.md
 ```
 
 What it does:
 - opens a new agterm session right after this one, without switching the user to it, in the directory
   that holds `.handoffs/`;
+- names it, and the Claude session in it (`claude --name`), `NNN-<task>-<project>`, e.g.
+  `013-handoff-naming-skills`: the number from the brief, the task from the brief's `Task:` line, the
+  project from the directory name;
 - starts `claude` there with `HANDOFF_SEQ=NNN` (from the brief's name, so its peer transcript is
   `.peer-chats/chat-NNN.md`), the brief as its appended system prompt, and a first message that points it at
   the brief file;
@@ -107,7 +111,9 @@ What it does:
 Use `--no-peer` when the peer should not follow, and `--dry-run` to see the commands first. `--agent CMD`
 replaces `claude` (a test can pass `"sleep 30 #"`).
 
-Pick a name that says what the session does, e.g. `domain-tests-funds`; the user reads it in the sidebar.
+The `Task:` line under the brief's goal names the session: 2-4 words taken from the goal, e.g.
+`Task: handoff naming`. The user reads the name in the agterm sidebar and in the Claude session list, so
+name the goal, not the handoff. `--task "..."` overrides the line.
 
 ### Without agterm
 
@@ -120,7 +126,7 @@ absolute path, and exits 3. Exit 3 is the expected outcome here, not a failure t
 Show the user that output in full, as is, in your reply. Don't summarize it or leave it in the tool result
 alone, because the user can't see tool output. It tells them to:
 1. open a new terminal in the project directory;
-2. run `HANDOFF_SEQ=NNN claude`;
+2. run `HANDOFF_SEQ=NNN claude --name NNN-<task>-<project>`;
 3. ask Claude to read the brief, by its absolute path, and continue;
 
 and gives the same as one `claude --append-system-prompt …` command. Say plainly that agterm is missing (or

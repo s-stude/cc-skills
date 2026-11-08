@@ -18,6 +18,8 @@ You take over work another session started in this directory. That session stops
 
 ## The goal
 
+Task: <2-4 words naming the goal, e.g. "handoff naming"; launch.py names the sessions NNN-<task>-<project> from it>
+
 <The user's requests that define the work, verbatim, in order, each quoted. Then two or three sentences on
 what "done" means and why the user wants it. This section matters most: a session that knows the goal can
 recover from any other gap in the brief.>
