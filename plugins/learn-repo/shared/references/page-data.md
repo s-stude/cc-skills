@@ -63,12 +63,12 @@ Text fields are inserted as text, except `sourceNote`, view `read` and `NOTES`, 
 
 ## Views
 
-One view is one diagram with its explanation. Views with the same `tab` are shown together on one tab, one after another, never behind a selector.
+One view is one diagram with its explanation. All views are on one scrolling page, grouped into sections by `tab`; the buttons in the sticky bar jump to each section and highlight the one being read. Views with the same `tab` render one after another in that section, never behind a selector.
 
 | Field | Required | What it is |
 |---|---|---|
 | `id` | yes | Lowercase, digits, dashes. Unique. |
-| `tab` | yes | Tab name. Views sharing it render in order on that tab. |
+| `tab` | yes | Section name, also the label of its jump button. Views sharing it render in order in that section. |
 | `title` | yes | The view's scope, e.g. "Components of the Order API". |
 | `purpose` | yes | The question this view answers. |
 | `read` | yes | How to read it: shapes, arrows, what is left out. HTML allowed. |
@@ -171,7 +171,7 @@ Every node and edge carries `ev`, one of:
 - Evidence: missing or unknown `ev`, `code` marks without refs, illustrative items marked as code, the same key with different names in different views.
 - Kind rules: C4 levels and allowed element types, one focal system at L1, L3/L4 parents and focus; DFD flows that bypass a process, processes without input or output, context-view shape, balancing of boundary flows with the parent; lineage loops without a reason; pipeline ETL/ELT label; module cycles (reported) and internals views tied to a module; data-model levels and notations, missing counts at relationship ends, keys in a conceptual view, UML operations without code evidence.
 
-`screenshot.mjs` (rendered, in headless Chromium): every tab at desktop width and at 390 px, console errors, labels overlapping boxes or each other as actually drawn, text spilling out of a box, sideways page scrolling on a phone, and the popup opening on click and closing on Escape.
+`screenshot.mjs` (rendered, in headless Chromium): every section at desktop width and at 390 px, each tab button scrolling to its section, console errors, labels overlapping boxes or each other as actually drawn, text spilling out of a box, sideways page scrolling on a phone, and the popup opening on click and closing on Escape.
 
 ## Look at it in a browser
 

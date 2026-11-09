@@ -25,7 +25,7 @@ node $ROOT/shared/scripts/page.mjs build ./tmp/learn/<name>.data.js docs/learn/<
 node $ROOT/shared/scripts/screenshot.mjs docs/learn/<name>.html ./tmp/learn/shots-<name>
 ```
 
-It opens every tab at desktop width and at 390 px, checks console errors, overlaps as actually drawn, text spilling out of boxes, sideways scrolling on a phone, and the popup (opens on click, closes on Escape). Fix what it reports, then open the screenshots and judge what a script cannot: does the main path read in one direction, does each view answer its purpose. If no browser can run, say the page was checked only statically.
+It renders the page at desktop width and at 390 px, screenshots every section, checks that each tab button scrolls to its section, checks console errors, overlaps as actually drawn, text spilling out of boxes, sideways scrolling on a phone, and the popup (opens on click, closes on Escape). Fix what it reports, then open the screenshots and judge what a script cannot: does the main path read in one direction, does each view answer its purpose. If no browser can run, say the page was checked only statically.
 
 ## 5. Hand over
 

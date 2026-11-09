@@ -19,7 +19,8 @@ svg text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
 .ring { display: none; }
 .edge:hover .line, .edge.sel .line, .edge:focus-visible .line { stroke-width: 3.4; }
 .dim { opacity: 0.16; }
-.tab[aria-selected="true"] { background: #14142b; color: #fff; border-color: #14142b; }
+.panel, section[id^="view-"] { scroll-margin-top: calc(var(--nav-h, 0px) + 12px); }
+.tab[aria-current="true"] { background: #14142b; color: #fff; border-color: #14142b; }
 .relbtn.sel { background: #eef0fb; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 @media print {
@@ -41,8 +42,8 @@ svg text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
 	<div class="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-[#464a66]" id="evLegend"></div>
 </header>
 
-<nav class="noprint md:sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-[#f7f8fc]/95 backdrop-blur border-b border-[#d9dcea] flex flex-wrap items-center gap-2" aria-label="Views">
-	<div class="flex flex-wrap gap-2" role="tablist" id="tabs"></div>
+<nav class="noprint md:sticky top-0 z-10 -mx-4 px-4 py-2.5 bg-[#f7f8fc]/95 backdrop-blur border-b border-[#d9dcea] flex flex-wrap items-center gap-2" aria-label="Views" id="nav">
+	<div class="flex flex-wrap gap-2" id="tabs"></div>
 	<span class="grow"></span>
 	<button type="button" class="rounded-lg border border-[#d9dcea] bg-white px-3 py-1.5 text-sm font-medium hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" id="tourStart" hidden>Guided walk-through</button>
 	<button type="button" class="rounded-lg border border-[#d9dcea] bg-white px-3 py-1.5 text-sm font-medium hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]" id="clear">Clear highlight</button>
@@ -60,7 +61,7 @@ svg text { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Rob
 	<p class="max-w-[95ch]" id="tourText"></p>
 </section>
 
-<main class="grid gap-6" id="panels"></main>
+<main class="grid gap-10" id="panels"></main>
 
 <section class="grid gap-3 rounded-xl border border-[#d9dcea] bg-white p-5 max-w-none [&_h2]:text-xl [&_h2]:font-extrabold [&_h3]:font-bold [&_table]:text-[14px] [&_th]:text-left [&_th]:border-b [&_th]:border-[#d9dcea] [&_th]:px-2 [&_th]:py-1 [&_td]:border-b [&_td]:border-[#eceef6] [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_code]:mono [&_p]:max-w-[95ch]" id="notes" hidden></section>
 
@@ -918,23 +919,43 @@ function closeDetail() {
 }
 
 const tabs = [ ...new Set(VIEWS.map(view => view.tab ?? view.title)) ];
-function activate(tab, focus) {
-	if (state.tab !== tab && state.selection) closeDetail();
+function markTab(tab) {
+	if (state.tab === tab) return;
 	state.tab = tab;
 	document.querySelectorAll(".tab").forEach(button => {
-		const on = button.dataset.tab === tab;
-		button.setAttribute("aria-selected", on);
-		button.tabIndex = on ? 0 : -1;
-		if (on && focus) button.focus();
+		if (button.dataset.tab === tab) button.setAttribute("aria-current", "true");
+		else button.removeAttribute("aria-current");
 	});
-	document.querySelectorAll(".panel").forEach(panel => { panel.hidden = panel.dataset.tab !== tab; });
+}
+function navHeight() {
+	const nav = $("nav");
+	return getComputedStyle(nav).position === "sticky" ? nav.offsetHeight : 0;
+}
+function syncNavHeight() {
+	document.documentElement.style.setProperty("--nav-h", `${navHeight()}px`);
+}
+function spyTabs() {
+	const panels = [ ...document.querySelectorAll(".panel") ];
+	if (!panels.length) return;
+	const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+	const line = navHeight() + 24;
+	let current = panels[0];
+	for (const panel of panels) if (panel.getBoundingClientRect().top <= line) current = panel;
+	markTab(atBottom ? panels.at(-1).dataset.tab : current.dataset.tab);
+}
+function scrollToTab(tab) {
+	const panel = [ ...document.querySelectorAll(".panel") ].find(item => item.dataset.tab === tab);
+	if (!panel) return;
+	history.replaceState(null, "", `#${panel.id}`);
+	panel.scrollIntoView({ block: "start", behavior: "smooth" });
+	markTab(tab);
 }
 function jump(viewId) {
 	const view = VIEWS.find(other => other.id === viewId);
 	if (!view) return;
-	activate(view.tab ?? view.title);
 	history.replaceState(null, "", `#view-${viewId}`);
 	document.getElementById(`view-${viewId}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
+	markTab(view.tab ?? view.title);
 }
 
 function showTour(index) {
@@ -949,7 +970,6 @@ function showTour(index) {
 	$("tourNext").disabled = index === TOUR.length - 1;
 	if (!view) return;
 	if (state.selection) closeDetail();
-	activate(view.tab ?? view.title);
 	highlight(view.id, new Set(step.nodes ?? []), new Set(step.edges ?? []));
 	views.get(view.id)?.section.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
@@ -963,20 +983,23 @@ function boot() {
 	el("b", { class: "text-[#14142b]" }, $("evLegend"), "Evidence marks:");
 	for (const [ mark, meaning ] of Object.entries(MARKS)) el("span", {}, $("evLegend"), `[${mark}] ${meaning}`);
 	tabs.forEach((tab, index) => {
-		const button = el("button", { type: "button", role: "tab", class: "tab rounded-lg border border-[#d9dcea] bg-white px-3 py-1.5 text-sm font-semibold hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]", "data-tab": tab, id: `tab-${index}`, "aria-controls": `panel-${index}` }, $("tabs"), tab);
-		button.addEventListener("click", () => activate(tab));
-		button.addEventListener("keydown", event => {
-			const move = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
-			if (!move) return;
-			event.preventDefault();
-			activate(tabs[(index + move + tabs.length) % tabs.length], true);
-		});
-		const panel = el("div", { class: "panel grid gap-6", role: "tabpanel", "data-tab": tab, id: `panel-${index}`, "aria-labelledby": `tab-${index}` }, $("panels"));
+		const button = el("button", { type: "button", class: "tab rounded-lg border border-[#d9dcea] bg-white px-3 py-1.5 text-sm font-semibold hover:border-[#14142b] focus-visible:ring-2 focus-visible:ring-[#1d4ed8]", "data-tab": tab, id: `tab-${index}`, "aria-controls": `panel-${index}` }, $("tabs"), tab);
+		button.addEventListener("click", () => scrollToTab(tab));
+		const panel = el("section", { class: "panel grid gap-6", "data-tab": tab, id: `panel-${index}`, "aria-labelledby": `panelTitle-${index}` }, $("panels"));
+		el("p", { class: "text-xs font-bold uppercase tracking-[0.12em] text-[#464a66] border-b border-[#d9dcea] pb-1.5", id: `panelTitle-${index}` }, panel, tab);
 		for (const view of VIEWS.filter(other => (other.tab ?? other.title) === tab)) renderView(view, panel);
 	});
-	const initial = VIEWS.find(view => `#view-${view.id}` === location.hash);
-	activate(initial ? initial.tab ?? initial.title : tabs[0]);
-	if (initial) requestAnimationFrame(() => document.getElementById(`view-${initial.id}`)?.scrollIntoView({ block: "start" }));
+	syncNavHeight();
+	let spyQueued = false;
+	window.addEventListener("scroll", () => {
+		if (spyQueued) return;
+		spyQueued = true;
+		requestAnimationFrame(() => { spyQueued = false; spyTabs(); });
+	}, { passive: true });
+	window.addEventListener("resize", () => { syncNavHeight(); spyTabs(); });
+	markTab(tabs[0]);
+	const initial = location.hash ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+	if (initial?.matches(".panel, section[id^='view-']")) requestAnimationFrame(() => { initial.scrollIntoView({ block: "start" }); spyTabs(); });
 	$("clear").addEventListener("click", () => { closeDetail(); $("tour").hidden = true; });
 	if (TOUR.length) {
 		$("tourStart").hidden = false;

@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// Renders a learn page in headless Chromium, screenshots every tab and checks the rendered result.
+// Renders a learn page in headless Chromium, screenshots every tab section and checks the rendered result.
 // Usage: node screenshot.mjs <page.html | url> <out-dir> [width=1440]
-// Writes <out-dir>/tab-<n>.png per tab at the given width and narrow-<n>.png at 390 px.
+// All sections are on one scrolling page; the tab buttons jump to them.
+// Writes <out-dir>/tab-<n>.png per section at the given width and narrow-<n>.png at 390 px.
 // Checks: console errors, edge labels overlapping boxes or each other, node text spilling out of its box,
-// horizontal page overflow at 390 px, and the details popup opening on click and closing on Escape.
+// horizontal page overflow at 390 px, each tab button scrolling to its section,
+// and the details popup opening on click and closing on Escape.
 // Needs the playwright package: npm i -D playwright && npx playwright install chromium,
 // or PLAYWRIGHT_MODULE=/path/to/node_modules/playwright/index.mjs. Exit code 1 when a check fails.
 import { mkdirSync } from "node:fs";
@@ -31,7 +33,7 @@ function geometryCheck() {
 	const found = [];
 	const box = item => item.getBoundingClientRect();
 	const hit = (a, b, m = 0) => a.left < b.right - m && b.left < a.right - m && a.top < b.bottom - m && b.top < a.bottom - m;
-	for (const panel of document.querySelectorAll(".panel:not([hidden])")) {
+	for (const panel of document.querySelectorAll(".panel")) {
 		for (const section of panel.querySelectorAll("section[id^='view-']")) {
 			const view = section.id.slice(5);
 			const frames = [ ...section.querySelectorAll(".node") ].map(node => ({ id: node.dataset.id, rect: box(node.querySelector(".frame")), node }));
@@ -51,6 +53,16 @@ function geometryCheck() {
 	return found;
 }
 
+async function scrollSettled(page) {
+	let last = -1;
+	for (let i = 0; i < 40; i++) {
+		await page.waitForTimeout(100);
+		const y = await page.evaluate(() => window.scrollY);
+		if (y === last) return;
+		last = y;
+	}
+}
+
 for (const [ name, viewport ] of [ [ "tab", { width: Number(width), height: 1000 } ], [ "narrow", { width: 390, height: 844 } ] ]) {
 	const page = await browser.newPage({ viewport });
 	const errors = [];
@@ -59,22 +71,33 @@ for (const [ name, viewport ] of [ [ "tab", { width: Number(width), height: 1000
 	await page.goto(url, { waitUntil: "networkidle" });
 	await page.waitForTimeout(500);
 	const tabs = await page.locator(".tab").count();
+	if (name === "tab") for (const issue of await page.evaluate(geometryCheck)) problems.push(issue);
+	else {
+		const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+		if (overflow > 1) problems.push(`at 390 px: page scrolls sideways by ${overflow}px (only diagrams may scroll)`);
+	}
 	for (let i = 0; i < tabs; i++) {
-		await page.locator(".tab").nth(i).click();
-		await page.waitForTimeout(250);
 		const label = await page.locator(".tab").nth(i).textContent();
-		if (name === "tab") for (const issue of await page.evaluate(geometryCheck)) problems.push(`tab "${label}": ${issue}`);
-		else {
-			const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-			if (overflow > 1) problems.push(`tab "${label}" at 390 px: page scrolls sideways by ${overflow}px (only diagrams may scroll)`);
-		}
-		await page.screenshot({ path: join(outDir, `${name}-${i + 1}.png`), fullPage: true });
+		await page.locator(".tab").nth(i).click();
+		await scrollSettled(page);
+		const state = await page.evaluate(index => {
+			const panel = document.querySelectorAll(".panel")[index];
+			const nav = document.getElementById("nav");
+			const navBottom = getComputedStyle(nav).position === "sticky" ? nav.getBoundingClientRect().bottom : 0;
+			const top = panel.getBoundingClientRect().top;
+			const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+			return { current: document.querySelectorAll(".tab")[index].getAttribute("aria-current") === "true", reached: atBottom || Math.abs(top - navBottom) < 40 };
+		}, i);
+		if (!state.reached) problems.push(`${name}: tab "${label}" did not scroll to its section`);
+		if (!state.current) problems.push(`${name}: tab "${label}" is not marked current after scrolling to it`);
+		await page.locator(".panel").nth(i).screenshot({ path: join(outDir, `${name}-${i + 1}.png`) });
 	}
 	if (name === "tab") {
-		const node = page.locator(".panel:not([hidden]) .node").first();
+		const node = page.locator(".panel .node").first();
 		if (await node.count()) {
 			await page.locator(".tab").first().click();
-			await page.locator(".panel:not([hidden]) .node").first().click();
+			await scrollSettled(page);
+			await node.click();
 			if (await page.locator("#detail").isHidden()) problems.push("clicking a box did not open the details popup");
 			await page.keyboard.press("Escape");
 			if (await page.locator("#detail").isVisible()) problems.push("Escape did not close the details popup");
