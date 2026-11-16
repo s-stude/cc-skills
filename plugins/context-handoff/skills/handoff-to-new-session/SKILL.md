@@ -24,7 +24,7 @@ It prints, read-only:
 - this agterm session: its panes and what runs in them;
 - other sessions in the same directory;
 - the handoff chain: this session's number (`HANDOFF_SEQ`), earlier briefs (`.handoffs/brief-NNN.md`) and
-  peer transcripts (`.peer-chats/chat-NNN.md`), plus the old `.handoff/` and `peer-chat.md` if present.
+  peer conversations (`.peer-chats/chat-NNN/`, or `chat-NNN.md` from older peer-chat versions), plus the old `.handoff/` and `peer-chat.md` if present.
 
 Treat the output as raw material for the Environment and Done sections, not as the brief.
 
@@ -39,8 +39,9 @@ unclear who writes.
 ```
 
 Briefs and transcripts form one numbered chain per worktree: `.handoffs/brief-NNN.md` is what starts
-session NNN, and `.peer-chats/chat-NNN.md` is session NNN's peer conversation (the peer-chat script names it
-from `HANDOFF_SEQ`). The first session of a worktree, which had no brief, is 000. So the next brief's number
+session NNN, and the folder `.peer-chats/chat-NNN/` is session NNN's peer conversation (the peer-chat script names it
+from `HANDOFF_SEQ`). The first session of a worktree is 000: start-branch writes its brief as `brief-000.md`, and a worktree opened
+another way has no brief for it. So the next brief's number
 is one past the highest brief or transcript: the session writing it is the highest so far.
 
 The script creates `.handoffs/` in the git top level (or the working directory), takes that number, and
@@ -100,8 +101,8 @@ What it does:
 - names it, and the Claude session in it (`claude --name`), `NNN-<task>-<project>`, e.g.
   `013-handoff-naming-skills`: the number from the brief, the task from the brief's `Task:` line, the
   project from the directory name;
-- starts `claude` there with `HANDOFF_SEQ=NNN` (from the brief's name, so its peer transcript is
-  `.peer-chats/chat-NNN.md`), the brief as its appended system prompt, and a first message that points it at
+- starts `claude` there with `HANDOFF_SEQ=NNN` (from the brief's name, so its peer conversation is
+  `.peer-chats/chat-NNN/`), the brief as its appended system prompt, and a first message that points it at
   the brief file;
 - if this session's split pane runs a program (a peer such as Codex), opens a split in the new session and
   starts the same command there, with this session's id swapped for the new one, so a peer that was told

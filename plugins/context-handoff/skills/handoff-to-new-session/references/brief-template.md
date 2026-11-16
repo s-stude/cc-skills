@@ -14,7 +14,7 @@ You take over work another session started in this directory. That session stops
 - Branch: `<branch>` (base `<base>`), HEAD `<hash> <subject>` when this was written
 - Handed over from: agterm session `<id>` ("<name>"), <date and time with zone>
 - Earlier briefs: `<paths, oldest first>`, or none
-- Previous peer transcript: `.peer-chats/chat-<NNN-1>.md`, or none. Yours will be `.peer-chats/chat-NNN.md`.
+- Previous peer conversation: `.peer-chats/chat-<NNN-1>/`, or none. Yours will be `.peer-chats/chat-NNN/`.
 
 ## The goal
 

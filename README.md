@@ -4,20 +4,21 @@ Claude Code agent skills I've built or collected across different projects.
 
 ## Install
 
-Each skill has its own `install.sh` that symlinks it into `~/.claude/skills/<name>`. Skills that also work in Codex have `install-claude.sh` and `install-codex.sh` instead; the Codex one links into `~/.codex/skills/<name>` (or `$CODEX_HOME/skills`):
+Link every skill at once, or one skill by its folder. The `-cc` scripts link into `~/.claude/skills` for Claude Code, the `-codex` ones into `${CODEX_HOME:-~/.codex}/skills`; `unlink-*` removes those links again:
 
 ```sh
-./_workflow/doc-review/install-claude.sh
-./_workflow/doc-review/install-codex.sh
+./link-all-cc.sh                                # every skill
+./unlink-all-cc.sh
+./link-one-cc.sh _workflow/start-branch/        # one skill: ~/.claude/skills/start-branch
+./unlink-one-cc.sh _workflow/start-branch/
+./link-all-codex.sh                             # the same for Codex
 ```
 
-It can be run from any directory and is safe to re-run. It won't overwrite a real directory at the target path.
+`*-all-*` finds every folder with a `SKILL.md` at any depth and runs the matching `*-one-*` on it. It skips `plugins/`, which are installed as plugins, and any skill whose `name:` differs from its folder name or repeats another skill's folder name, since those would clash.
 
-To link every skill into one project's `.claude/skills` instead:
+Older skills have an `install.sh` (or `install-claude.sh` and `install-codex.sh`) instead. [peer-chat](peer-chat) needs its `install.sh` for the full setup, because it also puts two commands on `PATH` and adds Codex rules.
 
-```sh
-./link-skills.sh ~/path/to/project
-```
+All of these run from any directory and are safe to re-run. The root `link-*` and `unlink-*` scripts only touch their own links: a real directory, or a symlink to somewhere else, is reported and left alone. The older `install.sh` scripts replace a symlink to somewhere else, and peer-chat's `install.sh` relinks its two commands in `~/.local/bin` (moving a real file there aside as a backup); only its skill folder links follow the same rule as the root scripts.
 
 ## Workflow
 
@@ -41,7 +42,7 @@ To link every skill into one project's `.claude/skills` instead:
 
 | Skill | What it does |
 |---|---|
-| [peer-chat](peer-chat) | Lets Claude Code and Codex talk as peers in an agterm split (installs for both, plus a helper script) |
+| [peer-chat](peer-chat) | Lets Claude Code and Codex talk as peers in an agterm split through message files (installs for both, plus two commands on `PATH`) |
 | [token-analysis](token-analysis) | Reports tokens, cost, tool calls and time spent across past Claude Code sessions |
 | [learn-from-session](learn-from-session) | Saves what a session learned into `CLAUDE.md` |
 | [find-docs](find-docs) | Looks up library and framework documentation |
@@ -59,4 +60,4 @@ These hold several skills each; every sub-skill has its own `install.sh`.
 
 ## Credits
 
-[peer-chat](peer-chat) and [telegram-mcp-setup](telegram-mcp-setup) are copies of other people's work; their READMEs link the originals.
+[peer-chat](peer-chat) started from someone else's recipe and has since been rewritten; [telegram-mcp-setup](telegram-mcp-setup) is a copy of someone else's work. Their READMEs link the originals.

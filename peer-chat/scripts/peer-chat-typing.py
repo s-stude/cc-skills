@@ -1520,6 +1520,164 @@ def read_message(use_stdin: bool, message_file: str | None) -> str:
         os.close(spool_fd)
 
 
+# --- Transcript -------------------------------------------------------------------------------
+# The writer's record of the conversation: .peer-chats/chat-NNN.md at the git top level, one file
+# per session. NNN is HANDOFF_SEQ (set by the handoff skill's launch.py, matching
+# .handoffs/brief-NNN.md), else the file whose header names this agterm session, else the next free
+# number. Message ids (msg-NNN) continue across the files.
+
+TRANSCRIPT_DIR = ".peer-chats"
+TRANSCRIPT_RE = re.compile(r"^chat-(\d{3})\.md$")
+MESSAGE_ID_RE = re.compile(r"^### .+ · msg-(\d{3,})$", re.MULTILINE)
+SESSION_LINE = "- agterm session: "
+AGENT_NAMES = {"claude": "Claude", "codex": "Codex"}
+LABEL_NOTE = "_Whitespace collapsed and `{label}` label added by peer-chat.py._"
+
+
+def project_root(cwd: Path | None = None) -> Path:
+    base = cwd or Path.cwd()
+    try:
+        top = subprocess.run(
+            [ "git", "rev-parse", "--show-toplevel" ],
+            cwd=base, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        return Path(top)
+    except (OSError, subprocess.CalledProcessError):
+        return base
+
+
+def now_stamp() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+
+def transcript_files(directory: Path) -> list[tuple[int, Path]]:
+    if not directory.is_dir():
+        return []
+    found = []
+    for entry in directory.iterdir():
+        match = TRANSCRIPT_RE.match(entry.name)
+        if match and entry.is_file():
+            found.append((int(match.group(1)), entry))
+    return sorted(found)
+
+
+def exclude_from_git(directory: Path) -> None:
+    """Keeps the transcripts out of git through the local exclude file, never .gitignore."""
+    root = directory.parent
+    probe = f"{directory.name}/x"
+    try:
+        ignored = subprocess.run([ "git", "check-ignore", "-q", probe ], cwd=root, capture_output=True)
+        if ignored.returncode in (0, 128):
+            return
+        exclude = subprocess.run(
+            [ "git", "rev-parse", "--git-path", "info/exclude" ],
+            cwd=root, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return
+    exclude_path = Path(exclude) if os.path.isabs(exclude) else root / exclude
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    with exclude_path.open("a", encoding="utf-8") as stream:
+        stream.write(f"{directory.name}/\n")
+
+
+def transcript_path(
+    root: Path | None = None,
+    env: dict[str, str] | None = None,
+    create: bool = True,
+) -> Path:
+    environ = os.environ if env is None else env
+    directory = (root or project_root()) / TRANSCRIPT_DIR
+    files = transcript_files(directory)
+    seq_text = environ.get("HANDOFF_SEQ", "").strip()
+    session = environ.get("AGTERM_SESSION_ID", "").strip()
+    if seq_text:
+        if not seq_text.isdigit():
+            raise ValueError(f"HANDOFF_SEQ must be a number, not {seq_text!r}")
+        seq = int(seq_text)
+    else:
+        seq = None
+        if session:
+            for number, path in files:
+                if f"{SESSION_LINE}{session}\n" in path.read_text(encoding="utf-8"):
+                    seq = number
+        if seq is None:
+            seq = files[-1][0] + 1 if files else 0
+    path = directory / f"chat-{seq:03d}.md"
+    if create and not path.exists():
+        directory.mkdir(parents=True, exist_ok=True)
+        exclude_from_git(directory)
+        brief = (directory.parent / ".handoffs" / f"brief-{seq:03d}.md")
+        header = [
+            f"# Peer conversation {seq:03d}",
+            "",
+            f"{SESSION_LINE}{session or 'unknown'}",
+            f"- started: {now_stamp()}",
+            f"- brief: `.handoffs/brief-{seq:03d}.md`" if brief.exists() else "- brief: none",
+            "",
+        ]
+        path.write_text("\n".join(header), encoding="utf-8")
+    return path
+
+
+LEGACY_TRANSCRIPT = "peer-chat.md"
+
+
+def next_message_id(directory: Path) -> str:
+    """One past the highest id in the transcripts, and in the single root peer-chat.md they replace."""
+    highest = 0
+    paths = [ path for _, path in transcript_files(directory) ]
+    legacy = directory.parent / LEGACY_TRANSCRIPT
+    if legacy.is_file():
+        paths.append(legacy)
+    for path in paths:
+        for match in MESSAGE_ID_RE.finditer(path.read_text(encoding="utf-8")):
+            highest = max(highest, int(match.group(1)))
+    return f"msg-{highest + 1:03d}"
+
+
+def append_entry(path: Path, heading: str, meta: list[str], body: str) -> None:
+    text = "\n".join([ "", "---", "", heading, "", *meta, "", body.rstrip(), "" ])
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(text)
+
+
+def log_sent_pending(path: Path, sender: str, recipient: str, label: str, typed: str) -> str:
+    message_id = next_message_id(path.parent)
+    body = typed[len(label):] if typed.startswith(label) else typed
+    append_entry(
+        path,
+        f"### {sender} → {recipient} · {message_id}",
+        [ f"**Sent:** {now_stamp()}  ", "**Delivery:** pending  ", LABEL_NOTE.format(label=label.strip()) ],
+        body,
+    )
+    return message_id
+
+
+def set_delivery(path: Path, message_id: str, status: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    start = text.rfind(f" · {message_id}\n")
+    if start < 0:
+        raise ValueError(f"{message_id} is not in {path}")
+    marker = "**Delivery:** pending"
+    at = text.find(marker, start)
+    if at < 0:
+        raise ValueError(f"{message_id} has no pending delivery in {path}")
+    path.write_text(text[:at] + f"**Delivery:** {status}" + text[at + len(marker):], encoding="utf-8")
+
+
+def log_received(path: Path, sender: str, recipient: str, message: str) -> str:
+    label = f"Chat from {sender}:"
+    body = message.strip()
+    if body.startswith(label):
+        body = body[len(label):].strip()
+    if not body:
+        raise ValueError("received message is empty")
+    message_id = next_message_id(path.parent)
+    append_entry(path, f"### {sender} → {recipient} · {message_id}", [ f"**Received:** {now_stamp()}" ], body)
+    return message_id
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--to", choices=PROFILES)
@@ -1540,7 +1698,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="queue a Codex message with Tab instead of steering with Return",
     )
-    source = parser.add_mutually_exclusive_group(required=True)
+    parser.add_argument(
+        "--no-log",
+        action="store_true",
+        help="send without writing the transcript (.peer-chats/chat-NNN.md)",
+    )
+    parser.add_argument(
+        "--from",
+        dest="sender",
+        choices=PROFILES,
+        help="with --log-received: who sent the message",
+    )
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
+        "--path",
+        action="store_true",
+        help="print this session's transcript path and exit",
+    )
+    mode.add_argument(
+        "--log-received",
+        action="store_true",
+        help="append a received message (from --stdin) to the transcript verbatim",
+    )
+    source = parser.add_mutually_exclusive_group()
     source.add_argument("--stdin", action="store_true")
     source.add_argument(
         "--message-file",
@@ -1555,6 +1735,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="create a private one-shot message file and print its path",
     )
     args = parser.parse_args(argv)
+    if args.path:
+        if args.stdin or args.message_file or args.prepare_message or args.to or args.sender:
+            parser.error("--path takes no other options")
+        return args
+    if args.log_received:
+        if not args.stdin or not args.sender:
+            parser.error("--log-received needs --from AGENT and --stdin")
+        if args.to or args.queue or args.no_log:
+            parser.error("--log-received does not send")
+        return args
+    if not (args.stdin or args.message_file or args.prepare_message):
+        parser.error("one of --stdin, --message-file, --prepare-message, --path, --log-received is required")
+    if args.sender:
+        parser.error("--from is only for --log-received")
     if args.prepare_message:
         if args.to or args.session or args.window or args.target_command or args.queue:
             parser.error("--prepare-message does not accept target options")
@@ -1573,6 +1767,16 @@ def report_success(sent: int) -> None:
 def run_main(progress: DeliveryProgress) -> int:
     """Run one CLI operation inside main's outer signal boundary."""
     args = parse_args()
+    if args.path:
+        print(transcript_path())
+        return 0
+    if args.log_received:
+        recipient = next(agent for agent in PROFILES if agent != args.sender)
+        message = read_message(True, None)
+        path = transcript_path()
+        message_id = log_received(path, AGENT_NAMES[args.sender], AGENT_NAMES[recipient], message)
+        print(json.dumps({"logged": message_id, "transcript": str(path)}))
+        return 0
     if args.prepare_message:
         path = prepare_message(args.prepare_message)
         print(json.dumps({"messageFile": str(path)}))
@@ -1581,8 +1785,23 @@ def run_main(progress: DeliveryProgress) -> int:
     window, sid = resolve_target(args.session, args.window, profile)
     profile = bind_pane(find_node(sid, window), profile)
     message = read_message(args.stdin, args.message_file)
-    sent = send_with_retry(sid, profile, message, window, progress)
+    log = None
+    if not args.no_log:
+        sender = next(agent for agent in PROFILES if agent != args.to)
+        path = transcript_path()
+        message_id = log_sent_pending(
+            path, AGENT_NAMES[sender], AGENT_NAMES[args.to], profile.label, normalize(profile, message)
+        )
+        log = (path, message_id)
+    try:
+        sent = send_with_retry(sid, profile, message, window, progress)
+    except BaseException:
+        if log:
+            set_delivery(*log, "failed" if progress.phase == "not_started" else "uncertain")
+        raise
     progress.phase = "confirmed"
+    if log:
+        set_delivery(*log, "sent")
     report_success(sent)
     return 0
 

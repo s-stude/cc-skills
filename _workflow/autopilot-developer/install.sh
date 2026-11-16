@@ -28,8 +28,8 @@ status=0
 link "$HOME/.claude/skills" || status=1
 link "$HOME/.codex/skills" || status=1
 
-if ! command -v peer-chat.py >/dev/null 2>&1; then
-  echo "Note: peer-chat.py not found on PATH; install peer-chat too (peer-chat/install.sh at the repo root)" >&2
+if ! command -v peer-chat-files.py >/dev/null 2>&1; then
+  echo "Note: peer-chat-files.py not found on PATH; set up peer-chat too (peer-chat/SKILL.md, Setup)" >&2
 fi
 
 exit $status

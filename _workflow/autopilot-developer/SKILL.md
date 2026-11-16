@@ -42,9 +42,9 @@ the user would not have allowed. Most of this skill is about telling those apart
    (`agtermctl session status blocked --target "$AGTERM_SESSION_ID" --socket "$AGTERM_SOCKET"`),
    say what is waiting, and keep doing work that doesn't need the peer (exploring, drafting the
    plan) until the user clears it.
-2. Load the `peer-chat` skill and follow it for every message to and from the peer: `peer-chat.py`
-   as the only way to type into the other pane, and the verbatim `peer-chat.md` transcript. You are
-   the writer, so you keep the transcript; tell the peer that in your first message.
+2. Load the `peer-chat` skill and follow it for every message to and from the peer:
+   `peer-chat-files.py send` is the only way to reach the other pane, and the message files under
+   `.peer-chats/chat-NNN/` are the record, kept by the script for both of you.
 3. Roles. The agent whose pane received the user's request is the sole writer for the whole task;
    the peer only reads (`git show`, `git diff`, grep) and reviews. Say this in the first message.
    This works in either direction: you may be Claude with Codex as peer, or Codex with Claude.

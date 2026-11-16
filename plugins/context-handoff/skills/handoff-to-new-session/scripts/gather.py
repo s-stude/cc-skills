@@ -91,9 +91,9 @@ else:
 notes = []
 seq = os.environ.get("HANDOFF_SEQ")
 out.append("\n## Handoff chain\n")
-out.append(f"- This session's number: {seq} (HANDOFF_SEQ)" if seq else "- This session's number: not set (HANDOFF_SEQ unset): the highest `.peer-chats/chat-NNN.md`, or 000")
-out.append("- Briefs: `.handoffs/brief-NNN.md` (brief-NNN started session NNN); transcripts: `.peer-chats/chat-NNN.md` (session NNN's peer chat)")
-for pattern in (".handoffs/brief-*.md", ".peer-chats/chat-*.md", ".handoff/brief*.md", ".claude/brief*.md", ".claude/system*.md", "*peer-chat*.md"):
+out.append(f"- This session's number: {seq} (HANDOFF_SEQ)" if seq else "- This session's number: not set (HANDOFF_SEQ unset): the highest `.peer-chats/chat-NNN/`, or 000")
+out.append("- Briefs: `.handoffs/brief-NNN.md` (brief-NNN started session NNN); peer conversations: `.peer-chats/chat-NNN/` (session NNN's peer chat; `chat-NNN.md` in older peer-chat versions)")
+for pattern in (".handoffs/brief-*.md", ".peer-chats/chat-*/index.md", ".peer-chats/chat-*.md", ".handoff/brief*.md", ".claude/brief*.md", ".claude/system*.md", "*peer-chat*.md"):
 	for path in sorted(root.glob(pattern)):
 		if path.is_file() and path.stat().st_size:
 			notes.append(f"- `{path.relative_to(root)}` ({path.stat().st_size} bytes, modified {run('date', '-r', str(int(path.stat().st_mtime)), '+%Y-%m-%d %H:%M')})")

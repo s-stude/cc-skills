@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Reserves and prints the next .handoffs/brief-NNN.md under ROOT (default: the git top level, else the working
-# directory). brief-NNN is what starts session NNN, whose peer transcript is .peer-chats/chat-NNN.md, so NNN is one
+# directory). brief-NNN is what starts session NNN, whose peer conversation is .peer-chats/chat-NNN/ (chat-NNN.md in
+# older peer-chat versions), so NNN is one
 # past the highest brief or transcript number: the session writing the brief is the highest so far. The first session
-# of a worktree, which had no brief, is 000. Creates .handoffs/ and, inside a git checkout, keeps .handoffs/ and
+# of a worktree is 000 (start-branch writes brief-000.md; otherwise it has no brief). Creates .handoffs/ and, inside a git checkout, keeps .handoffs/ and
 # .peer-chats/ out of git through the local exclude file (never .gitignore).
 set -euo pipefail
 
@@ -20,9 +21,10 @@ if git -C "$root" rev-parse --git-dir >/dev/null 2>&1; then
 fi
 
 highest=0
-for file in "$dir"/brief-[0-9]*.md "$root"/.peer-chats/chat-[0-9]*.md; do
+for file in "$dir"/brief-[0-9]*.md "$root"/.peer-chats/chat-[0-9]*; do
 	[ -e "$file" ] || continue
-	digits="$(basename "$file" .md)"
+	digits="$(basename "$file")"
+	digits="${digits%.md}"
 	digits="${digits##*-}"
 	[[ "$digits" =~ ^[0-9]+$ ]] || continue
 	(( 10#$digits > highest )) && highest=$((10#$digits))

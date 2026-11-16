@@ -1,6 +1,6 @@
 ---
 name: finish-branch
-description: Finish a work branch - check that the plans and specs it added under docs/superpowers were implemented, turn whatever wasn't into docs/backlog items, archive the branch as completed/<branch-name>, remove the finished plans and specs, squash-merge it into its target base as one commit, delete the branch, and remove its worktree and folder on disk. Use whenever the user says to finish, close, wrap up, land or merge back a branch or worktree ("finish airesearch-worktree-foo", "merge this back to airesearch", "we're done with this branch, clean it up", "squash it in and remove the worktree"), even if they don't name the skill.
+description: Finish a work branch in any git project - find the branch it came from through git (the base start-branch recorded, the reflog, or the <base>-worktree-<name> name), check that the plans and specs it added were implemented and turn whatever wasn't into backlog items when the project keeps them, archive the branch as completed/<branch-name>, squash-merge it into its base as one commit, delete the branch, and remove its worktree and folder on disk. Use whenever the user says to finish, close, wrap up, land or merge back a branch or worktree ("finish main-worktree-foo", "merge this back", "we're done with this branch, clean it up", "squash it in and remove the worktree"), even if they don't name the skill.
 ---
 
 # Finish branch
@@ -12,8 +12,14 @@ Lands a finished branch as a single commit on its target and cleans up after it.
 
 ## Inputs
 
-- **Branch**: the one the user names. If none, use the branch checked out in the current directory, unless that is the target itself; then ask.
-- **Target**: the branch to squash into. If the user didn't name it, ask. Suggest the likely base in the question (the base named in the project's CLAUDE.md, a brief in `<worktree>/.claude/brief.md`, or `git merge-base` candidates), but don't assume it: landing on the wrong base is annoying to undo.
+- **Branch**: the one the user names. If none, use the branch checked out in the current directory, unless it has nothing to land (no commits ahead of any candidate target below); then ask.
+- **Target**: the branch to squash into, usually the one the branch was started from. If the user names one, it must exist as a local branch and differ from the branch being finished; if it doesn't, stop and say so. Never swap a target the user named for a recorded or guessed one. Only when the user named none, find it through git, in this order, and stop at the first that gives an existing local branch:
+  1. `git config --get branch.<branch>.base`, which `start-branch` records when it creates the branch;
+  2. the oldest reflog entry, `git reflog show --format=%gs <branch> | tail -1`, which reads `branch: Created from <base>` (`HEAD` or a commit hash there tells you nothing; reflogs also expire after 90 days by default);
+  3. the branch name: `<base>-worktree-<name>` names its base before the last `-worktree-`.
+
+  A target the user named, or one from 1, is used as is; say which one in the preflight summary. If 1 names a branch that no longer exists, say so before going on. A target from 2 or 3 is a guess: ask the user to confirm it. If none gives one, ask, and suggest candidates (the base named in the project's CLAUDE.md, the briefs in `<branch-wt>/.handoffs/brief-*.md` or the older `<branch-wt>/.claude/brief.md`, branches whose `git merge-base` with the branch is closest). Landing on the wrong base is annoying to undo, so never pick one silently from a guess.
+- **Main checkout**: in the usual layout it is `dirname "$(git rev-parse --path-format=absolute --git-common-dir)"`, from inside any worktree of the repository. Check that layout during preflight: the repository is not bare (`git rev-parse --is-bare-repository` prints `false`), the common dir is named `.git`, and `git -C <main-checkout> rev-parse --path-format=absolute --git-common-dir` gives the same common dir back. If any check fails (a bare repository, `git init --separate-git-dir`, a submodule), ask the user for the main checkout, or for bare repositories which checkout to run git in. The main checkout is the one folder this skill never removes.
 
 ## Preflight
 
@@ -32,6 +38,8 @@ Check everything before changing anything, so a problem stops the run with nothi
 
 ### 1. Find the finished plans and specs
 
+Steps 1-3 apply when the project keeps plans and specs in the repository: `docs/superpowers/plans` and `docs/superpowers/specs` (from the superpowers skills), or the folders its CLAUDE.md or AGENTS.md names. If it has none, skip to step 4.
+
 The finished plans and specs are the ones this branch added or changed:
 
 ```bash
@@ -46,13 +54,13 @@ For each finished plan and spec, go through what it promises (tasks, steps, requ
 
 For more than a couple of documents, check each one in a fresh subagent, so one long document doesn't crowd out the next. Give it the document path, the worktree path, the target and the instruction to report each item as done, partly done or not done, with evidence (file and line, commit, test name).
 
-Collect the items that are partly done or not done. For each, work out why it wasn't done: deferred on purpose, blocked, out of scope, dropped as unnecessary, or simply not reached. Look in the commits, the brief (`<branch-wt>/.claude/brief.md`), the plan's own notes and this session. If the reason can't be found, ask the user rather than guessing.
+Collect the items that are partly done or not done. For each, work out why it wasn't done: deferred on purpose, blocked, out of scope, dropped as unnecessary, or simply not reached. Look in the commits, the briefs (`<branch-wt>/.handoffs/brief-*.md`, or the older `<branch-wt>/.claude/brief.md`), the plan's own notes and this session. If the reason can't be found, ask the user rather than guessing.
 
 Show the user the list: what was done, what wasn't, and why. Items the user says were dropped on purpose and need no follow-up don't become backlog items, but name them in the final report.
 
 ### 3. Create backlog items for what wasn't done
 
-Use the `backlog` skill to create one item in `docs/backlog/` per gap, or one per group of closely related gaps. If the `backlog` skill isn't available, stop and tell the user rather than inventing a format.
+Use the `backlog` skill to create one item in `docs/backlog/` per gap, or one per group of closely related gaps. If the project tracks follow-ups some other way (its CLAUDE.md names an issue tracker or a folder), use that. If neither is there, stop and ask the user where the gaps should go rather than inventing a format.
 
 Each item has to stand on its own, because the plan it came from is about to be deleted. Someone picking it up months later should not need this session or the deleted plan. Include:
 
@@ -84,7 +92,7 @@ This commit lands after the archive, so `completed/<branch-name>` still has the 
 git -C <target-wt> merge --squash <branch>
 ```
 
-On conflicts, stop. Show the conflicted files and ask how to proceed (resolve here, or `git -C <target-wt> merge --abort` and rebase the branch first). Don't resolve conflicts on your own.
+On conflicts, stop. Show the conflicted files and ask how to proceed: resolve them here, or abandon the squash and rebase the branch first. To abandon it, run `git -C <target-wt> reset --merge HEAD` (`merge --abort` doesn't work here: a squash merge leaves no `MERGE_HEAD`). The preflight made sure the target had no changes of its own, but check `git -C <target-wt> status` first in case anything changed since the conflict. Don't resolve conflicts on your own.
 
 Then commit once. Write the message from the branch's commits and diff, in the repo's style (check `git log` on the target: prefix, tense, language). If the user gave a message, use theirs. Add any commit attribution lines the session requires.
 
@@ -106,7 +114,7 @@ Never remove the main repo root.
 git branch -D <branch>
 ```
 
-`-D` is needed because a squash merge doesn't make the branch an ancestor of the target. That's safe here: `completed/<branch-name>` holds everything except the deletion commit from step 5.
+`-D` is needed because a squash merge doesn't make the branch an ancestor of the target. That's safe here: `completed/<branch-name>` holds everything except the deletion commit from step 5. Deleting the branch also drops its `branch.<branch>.base` setting.
 
 ## Report
 
@@ -116,7 +124,7 @@ Finish with a short summary:
 - the backlog items created (paths), and items dropped on purpose with no backlog item
 - `completed/<branch-name>` and the commit it points to
 - the plans and specs removed
-- the squash commit (hash + subject) and the target it landed on
+- the squash commit (hash + subject) and the target it landed on, and how the target was found
 - the deleted branch, and the removed worktree path
 - anything skipped or still pending, such as the target now being ahead of its remote
 

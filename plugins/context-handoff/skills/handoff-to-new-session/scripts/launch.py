@@ -4,8 +4,8 @@ appended system prompt, and recreates a peer program running in this session's s
 
 Usage: launch.py --brief .handoffs/brief-007.md [--task "short task"] [--no-peer] [--dry-run]
 
-The new session gets HANDOFF_SEQ=007 from the brief's name, so peer-chat.py names its transcript
-.peer-chats/chat-007.md.
+The new session gets HANDOFF_SEQ=007 from the brief's name, so peer-chat names its conversation folder
+.peer-chats/chat-007/.
 
 Both the agterm session and the Claude session (claude --name) are named NNN-<task>-<project>, e.g.
 007-handoff-naming-skills. The task comes from --task, else from the brief's "Task:" line under its goal; the
@@ -146,7 +146,10 @@ if peer:
 		time.sleep(0.25)
 	# A peer that was told this session's id (Codex's shell_environment_policy) must learn the new one
 	peer_argv = [ part.replace(own_id, new_id).replace(own_id.lower(), new_id.lower()) for part in peer ]
-	peer_line = shlex.join(peer_argv)
+	# A peer started with an explicit HANDOFF_SEQ (say, Codex's shell_environment_policy.set) gets the new number too
+	peer_argv = [ re.sub(r'(HANDOFF_SEQ=["\']?)\d+', lambda m: m.group(1) + handoff_seq, part) for part in peer_argv ]
+	# The peer gets the same HANDOFF_SEQ, so whichever of the two starts the peer chat picks chat-NNN
+	peer_line = f"export HANDOFF_SEQ={handoff_seq}; " + shlex.join(peer_argv)
 	ctl("session", "type", "--target", new_id, "--pane", "right", "--stdin", stdin=peer_line + "\n")
 
 claude_ok = peer_ok = False
@@ -158,5 +161,5 @@ for _ in range(60):
 		break
 	time.sleep(0.5)
 
-print(json.dumps({ "session": new_id, "name": name, "brief": str(relative_brief), "handoffSeq": handoff_seq, "transcript": f".peer-chats/chat-{handoff_seq}.md", "claudeRunning": claude_ok, "peer": peer_line, "peerRunning": peer_ok if peer else None }, indent=2))
+print(json.dumps({ "session": new_id, "name": name, "brief": str(relative_brief), "handoffSeq": handoff_seq, "transcript": f".peer-chats/chat-{handoff_seq}/", "claudeRunning": claude_ok, "peer": peer_line, "peerRunning": peer_ok if peer else None }, indent=2))
 sys.exit(0 if claude_ok else 1)
