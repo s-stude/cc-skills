@@ -16,9 +16,9 @@ Link every skill at once, or one skill by its folder. The `-cc` scripts link int
 
 `*-all-*` finds every folder with a `SKILL.md` at any depth and runs the matching `*-one-*` on it. It skips `plugins/`, which are installed as plugins, and any skill whose `name:` differs from its folder name or repeats another skill's folder name, since those would clash.
 
-Older skills have an `install.sh` (or `install-claude.sh` and `install-codex.sh`) instead. [peer-chat](peer-chat) needs its `install.sh` for the full setup, because it also puts two commands on `PATH` and adds Codex rules.
+They run from any directory and are safe to re-run. They only touch their own links: a real directory, or a symlink to somewhere else, is reported and left alone.
 
-All of these run from any directory and are safe to re-run. The root `link-*` and `unlink-*` scripts only touch their own links: a real directory, or a symlink to somewhere else, is reported and left alone. The older `install.sh` scripts replace a symlink to somewhere else, and peer-chat's `install.sh` relinks its two commands in `~/.local/bin` (moving a real file there aside as a backup); only its skill folder links follow the same rule as the root scripts.
+[peer-chat](peer-chat) is the one skill with its own `install.sh`, needed for the full setup: besides the skill links it puts two commands on `PATH` and adds Codex rules. It relinks those two commands in `~/.local/bin` (moving a real file there aside as a backup); its skill links follow the same rule as the root scripts.
 
 ## Workflow
 
@@ -26,7 +26,7 @@ All of these run from any directory and are safe to re-run. The root `link-*` an
 |---|---|
 | [start-branch](_workflow/start-branch) | Starts work in a new branch and sibling worktree, writes a brief, opens a Claude session there |
 | [finish-branch](_workflow/finish-branch) | Checks plans were implemented, backlogs leftovers, squash-merges and archives the branch |
-| [autopilot-developer](_workflow/autopilot-developer) | Plans and implements a request unattended, one commit per task, with the other agent reviewing over peer-chat (installs for Claude and Codex; needs peer-chat) |
+| [autopilot-developer](_workflow/autopilot-developer) | Plans and implements a request unattended, one commit per task, with the other agent reviewing over peer-chat (needs peer-chat) |
 | [backlog](_workflow/backlog) | Files, dedupes and closes deferred work items in `docs/backlog/` |
 | [commit-code](_workflow/commit-code) | Commits the changes for a feature with a clear message |
 | [doc-review](_workflow/doc-review) | Reviews docs like code: gaps, conflicts, broken links, stale references |
@@ -56,7 +56,7 @@ All of these run from any directory and are safe to re-run. The root `link-*` an
 | [petroleum-jobs](_project-related/petroleum-jobs) | Rigzone pipeline: collect job URLs, save each post as markdown, normalize it to JSON |
 | [airport-jobs](_project-related/airport-jobs/skills) | Turn a job URL or text into JSON, then assign it a category |
 
-These hold several skills each; every sub-skill has its own `install.sh`.
+These hold several skills each.
 
 ## Credits
 

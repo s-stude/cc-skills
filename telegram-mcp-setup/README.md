@@ -12,6 +12,8 @@ Annakov.
 
 ## Install
 
+From the repository root:
+
 ```sh
-./install.sh
+./link-one-cc.sh telegram-mcp-setup/
 ```
